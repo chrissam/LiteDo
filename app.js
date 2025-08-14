@@ -1460,13 +1460,13 @@ class TodoApp {
                     
                     <div class="task-actions">
                         <button class="task-action-btn complete" onclick="window.app.toggleTask('${task.id}')" title="Toggle completion">
-                            ${task.completed ? '↶' : '✓'}
+                            ${task.completed ? '↺' : '✓'}
                         </button>
                         <button class="task-action-btn edit" onclick="window.app.editTask('${task.id}')" title="Edit task">
-                            ✎
+                            ✏️
                         </button>
                         <button class="task-action-btn delete" onclick="window.app.deleteTask('${task.id}')" title="Delete task">
-                            🗑
+                            🗑️
                         </button>
                     </div>
                 </div>
