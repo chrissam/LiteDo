@@ -1068,9 +1068,24 @@ class TodoApp {
         }
     }
 
-    // Parse advanced query string into predicate
+        // Parse advanced query string into predicate
     parseQuery(query) {
         if (!query) return () => true;
+        
+        // Handle multiple tag: operators specially for AND logic
+        const tagTokens = query.match(/(^|\s)tag\s*:\s*("[^"]+"|'[^']+'|[^\s]+)/gi) || [];
+        if (tagTokens.length > 1) {
+            const requiredTags = tagTokens.map(t => {
+                const raw = t.split(':')[1].trim();
+                return raw.replace(/^"|"$/g, '').replace(/^'|'$/g, '').toLowerCase();
+            });
+            
+            // Return a predicate that requires ALL tags to be present
+            return task => requiredTags.every(reqTag => 
+                task.tags.some(taskTag => taskTag.toLowerCase() === reqTag)
+            );
+        }
+        
         const tokens = [];
         let current = '';
         let inQuotes = false;
@@ -1081,6 +1096,7 @@ class TodoApp {
             else { current += ch; }
         }
         if (current) tokens.push(current);
+        
         const clauses = tokens.map(tok => {
             const m = tok.match(/^\s*([a-zA-Z_\-]+)\s*:\s*(.*)$/);
             if (!m) {
@@ -1094,7 +1110,7 @@ class TodoApp {
             let value = (m[2] || '').trim().replace(/^"|"$/g, '');
             switch (normKey) {
                 case 'tag': {
-                    // support tag:one tag:two (AND)
+                    // Single tag search
                     const val = value.toLowerCase();
                     return task => task.tags.some(t => t.toLowerCase() === val);
                 }
@@ -1151,15 +1167,6 @@ class TodoApp {
         // Filter by search (supports advanced operators)
         if (this.currentSearch) {
             const predicate = this.parseQuery(this.currentSearch.trim());
-            // For multiple tag: tokens (AND), parse again and pre-filter
-            const tagTokens = this.currentSearch.match(/(^|\s)tag\s*:\s*("[^"]+"|'[^']+'|[^\s]+)/gi) || [];
-            if (tagTokens.length > 1) {
-                const required = tagTokens.map(t => {
-                    const raw = t.split(':')[1].trim();
-                    return raw.replace(/^"|"$/g, '').replace(/^'|'$/g, '').toLowerCase();
-                });
-                filtered = filtered.filter(task => required.every(req => task.tags.map(x => x.toLowerCase()).includes(req)));
-            }
             filtered = filtered.filter(predicate);
         }
 
@@ -1999,9 +2006,13 @@ class TodoApp {
 
     // Show add tag form
     showAddTagForm() {
+        console.log('showAddTagForm called'); // Debug log
         const addTagForm = document.getElementById('addTagForm');
         if (addTagForm) {
+            console.log('Add tag form found, showing it'); // Debug log
             addTagForm.style.display = 'block';
+        } else {
+            console.error('Add tag form not found!'); // Debug log
         }
     }
 
@@ -2019,23 +2030,58 @@ class TodoApp {
 
     // Save new tag
     saveNewTag() {
+        console.log('saveNewTag called'); // Debug log
+        
         const newTagName = document.getElementById('newTagName');
-        if (!newTagName || !newTagName.value.trim()) return;
+        if (!newTagName || !newTagName.value.trim()) {
+            console.log('No tag name provided'); // Debug log
+            return;
+        }
 
         const tagName = newTagName.value.trim();
+        console.log('Tag name:', tagName); // Debug log
         
         // Check if tag already exists
-        if (this.getAllTags().includes(tagName)) {
+        const existingTags = this.getAllTags();
+        console.log('Existing tags:', existingTags); // Debug log
+        
+        if (existingTags.includes(tagName)) {
+            console.log('Tag already exists'); // Debug log
             alert('Tag already exists!');
             return;
         }
 
-        // Add tag to all tasks (optional - you could make this configurable)
-        // For now, just create the tag without assigning it to tasks
+        console.log('Creating placeholder task for tag'); // Debug log
+        
+        // Create a new task with this tag to ensure it appears in the system
+        // This is a workaround since we need at least one task to have the tag
+        const placeholderTask = {
+            id: this.generateId(),
+            title: `Tag placeholder: ${tagName}`,
+            description: `This task was created to establish the tag "${tagName}"`,
+            completed: false,
+            priority: 'Low',
+            dueDate: '',
+            tags: [tagName],
+            createdDate: this.getCurrentDate(),
+            createdTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            subtasks: [],
+            subtasksDone: []
+        };
+        
+        this.tasks.unshift(placeholderTask);
+        console.log('Placeholder task added, total tasks:', this.tasks.length); // Debug log
+        
+        this.saveData();
+        console.log('Data saved'); // Debug log
         
         this.hideAddTagForm();
         this.renderTagsModal();
         this.renderTags(); // Update sidebar tags
+        
+        // Show success message
+        alert(`Tag "${tagName}" created successfully!`);
+        console.log('Tag creation completed'); // Debug log
     }
 
     // Edit tag
