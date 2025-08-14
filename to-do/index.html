@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fancy Tasks - Smart, Quick, and Delightful</title>
+    <title>LiteDo — Light, Fast, Yours</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,15 +11,45 @@
         <!-- Left Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h1 class="app-title">Fancy Tasks</h1>
-                <p class="app-tagline">Smart, quick, and delightful</p>
+                <div class="brand-row">
+                    <svg class="app-logo" viewBox="0 0 64 64" aria-hidden="true">
+                        <defs>
+                            <linearGradient id="mintGrad" x1="0" x2="1" y1="0" y2="1">
+                                <stop offset="0%" stop-color="#a8e6a3"/>
+                                <stop offset="100%" stop-color="#21a0aa"/>
+                            </linearGradient>
+                        </defs>
+                        <circle cx="32" cy="32" r="28" fill="url(#mintGrad)" opacity="0.95"/>
+                        <!-- Feather/quill tilted for clarity -->
+                        <g transform="rotate(-20 32 32)">
+                            <!-- Feather body -->
+                            <path d="M36 10 C44 14 50 22 52 30 C54 38 50 46 44 52 C38 58 30 60 24 56 C18 52 16 44 18 36 C20 28 26 18 36 10 Z"
+                                  fill="#f7fffb" stroke="#0e3a3f" stroke-width="2"/>
+                            <!-- Shaft (rachis) -->
+                            <path d="M24 56 L46 16" stroke="#0e3a3f" stroke-width="2.6" stroke-linecap="round"/>
+                            <!-- Barbs -->
+                            <path d="M28 48 L35 43" stroke="#a2e7da" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M30 44 L38 38" stroke="#a2e7da" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M32 40 L40 34" stroke="#a2e7da" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M34 36 L42 30" stroke="#a2e7da" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M36 32 L44 26" stroke="#a2e7da" stroke-width="2" stroke-linecap="round"/>
+                        </g>
+                        <!-- Ink check to suggest to‑do -->
+                        <path d="M18 46 l7 7 l14 -14" fill="none" stroke="#0e3a3f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+                    </svg>
+                    <div>
+                        <h1 class="app-title">LiteDo</h1>
+                        <p class="app-tagline">Lightweight. Fast. Yours.</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Search Box -->
             <div class="search-container">
-                <div class="search-input-wrapper">
+                <div class="search-input-wrapper" style="display:flex; gap:8px; align-items:center;">
                     <input type="text" id="searchInput" class="search-input" placeholder="Search (e.g., tag:work completed:true before:2025-01-01)">
                     <span class="search-icon">🔍</span>
+                    <button class="btn btn--secondary btn--sm" id="searchHelpBtn" title="Search tips">?</button>
                 </div>
             </div>
 
@@ -59,6 +89,11 @@
                     <span class="checkbox-custom"></span>
                     Show completed
                 </label>
+                <label class="checkbox-label" style="margin-top:8px;">
+                    <input type="checkbox" id="showTagsPanel">
+                    <span class="checkbox-custom"></span>
+                    Show tags panel
+                </label>
             </div>
 
             <!-- Sort Dropdown -->
@@ -72,8 +107,11 @@
             </div>
 
             <!-- Tags Section -->
-            <div class="tags-section">
+            <div class="tags-section" id="tagsSection">
                 <h3 class="section-title">Tags</h3>
+                <div class="form-group" style="margin-bottom: 8px;">
+                    <input type="text" id="tagSearchInput" class="form-control" placeholder="Filter tags..." />
+                </div>
                 <div class="tags-container" id="tagsContainer">
                     <!-- Tags will be dynamically populated -->
                 </div>
@@ -82,6 +120,7 @@
             <!-- Bottom Actions -->
             <div class="sidebar-footer">
                 <div id="fileStatus" class="selected-count" style="margin: 0 0 8px 0;">No file open</div>
+                <button class="btn btn--outline btn--full-width" id="newFileBtn">New file…</button>
                 <button class="btn btn--outline btn--full-width" id="openFileBtn">Open file…</button>
                 <button class="btn btn--outline btn--full-width" id="saveFileBtn">Save</button>
                 <button class="btn btn--outline btn--full-width" id="saveAsFileBtn">Save as…</button>
@@ -94,6 +133,20 @@
                     <span class="checkbox-custom"></span>
                     Auto-save to file
                 </label>
+                <label class="checkbox-label" style="margin-top: 8px;">
+                    <input type="checkbox" id="autoReloadToggle">
+                    <span class="checkbox-custom"></span>
+                    Auto-reload from file
+                </label>
+                <label class="checkbox-label" style="margin-top: 8px;">
+                    <input type="checkbox" id="reopenOnStartupToggle">
+                    <span class="checkbox-custom"></span>
+                    Reopen last file on startup
+                </label>
+                <div class="form-group" style="margin-top: 8px;">
+                    <label class="form-label" for="autoReloadInterval">Auto-reload every (seconds)</label>
+                    <input type="number" id="autoReloadInterval" class="form-control" min="2" step="1" value="5" />
+                </div>
                 <div class="form-group" style="margin-top: 8px;">
                     <label class="form-label" for="themeSelect">Theme</label>
                     <select id="themeSelect" class="form-control">
@@ -123,7 +176,11 @@
             </header>
 
             <!-- Add Task Form -->
-            <div class="add-task-section">
+            <div class="add-task-section" id="addTaskSection">
+                <div class="add-task-header">
+                    <h3 class="section-title" style="margin:0;">New Task</h3>
+                    <button type="button" id="toggleComposerBtn" class="btn btn--secondary btn--sm" aria-expanded="true" aria-label="Hide composer">−</button>
+                </div>
                 <form id="addTaskForm" class="add-task-form">
                     <div class="form-row">
                         <div class="form-group flex-1">
@@ -228,6 +285,32 @@
                 </div>
             </div>
 
+            <!-- Search Help Modal -->
+            <div id="searchHelpModal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Search help</h2>
+                        <button class="modal-close" id="closeSearchHelpBtn">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="card__body">
+                            <p>Use operators in the search box. Keys are case-insensitive.</p>
+                            <ul>
+                                <li><code>tag:work</code> — filter by tag</li>
+                                <li><code>priority:High</code></li>
+                                <li><code>completed:true</code> | <code>false</code></li>
+                                <li><code>is:today</code> | <code>upcoming</code> | <code>overdue</code> | <code>completed</code></li>
+                                <li><code>due:YYYY-MM-DD</code>, <code>before:YYYY-MM-DD</code>, <code>after:YYYY-MM-DD</code></li>
+                                <li><code>created:YYYY-MM-DD</code> | <code>today</code> | <code>yesterday</code></li>
+                                <li><code>createdBefore:YYYY-MM-DD</code>, <code>createdAfter:YYYY-MM-DD</code></li>
+                                <li><code>text:"exact phrase"</code> — match in title/description</li>
+                            </ul>
+                            <p>Free text terms also match title, description, and tags.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Edit Task Modal -->
             <div id="editTaskModal" class="modal hidden">
                 <div class="modal-content">
@@ -262,6 +345,13 @@
                                 <label class="form-label">Tags</label>
                                 <input type="text" id="editTaskTags" class="form-control" placeholder="Tags (comma separated)">
                             </div>
+                             <div class="form-group">
+                                 <label class="form-label">Subtasks</label>
+                                 <div style="margin-bottom: 8px;">
+                                     <button type="button" id="editAddSubtaskBtn" class="btn btn--outline btn--sm">+ Add subtask</button>
+                                 </div>
+                                 <div id="editSubtasksContainer" class="subtasks-container" style="display: none;"></div>
+                             </div>
                             <div class="form-actions">
                                 <button type="button" class="btn btn--outline" id="cancelEditBtn">Cancel</button>
                                 <button type="submit" class="btn btn--primary">Save Changes</button>

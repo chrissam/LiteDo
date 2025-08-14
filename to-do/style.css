@@ -793,6 +793,17 @@ select.form-control {
   background-clip: text;
 }
 
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.app-logo {
+  width: 40px;
+  height: 40px;
+}
+
 .app-tagline {
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
@@ -814,6 +825,8 @@ select.form-control {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   background-color: var(--color-surface);
+  color: var(--color-text);
+  caret-color: var(--color-text);
   font-size: var(--font-size-sm);
   transition: all var(--duration-fast) var(--ease-standard);
 }
@@ -906,9 +919,9 @@ select.form-control {
 }
 
 .checkbox-custom {
-  width: 16px;
-  height: 16px;
-  border: 1px solid var(--color-border);
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-sm);
   margin-right: var(--space-8);
   position: relative;
@@ -922,6 +935,22 @@ select.form-control {
 }
 
 .checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  font-weight: bold;
+}
+
+/* Ensure subtask checkboxes show checkmark too */
+.subtasks-list .checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
+  background-color: var(--color-pastel-green);
+  border-color: var(--color-primary);
+}
+.subtasks-list .checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {
   content: '✓';
   position: absolute;
   top: 50%;
@@ -954,6 +983,20 @@ select.form-control {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-6);
+  max-height: 160px;
+  overflow: hidden;
+  position: relative;
+}
+
+.tags-container::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, var(--color-light-gray) 100%);
+  pointer-events: none;
 }
 
 .tag-pill {
@@ -1043,6 +1086,13 @@ select.form-control {
   border-bottom: 1px solid var(--color-border);
 }
 
+.add-task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-12);
+}
+
 .add-task-form {
   display: flex;
   flex-direction: column;
@@ -1067,7 +1117,7 @@ select.form-control {
 
 .subtasks-container {
   padding: var(--space-16);
-  background-color: var(--color-pastel-yellow);
+  background-color: var(--color-pastel-blue);
   border-radius: var(--radius-base);
   margin-top: var(--space-8);
 }
@@ -1093,6 +1143,8 @@ select.form-control {
   border: none;
   cursor: pointer;
   padding: var(--space-2);
+  font-size: var(--font-size-xl);
+  line-height: 1;
 }
 
 /* Bulk Actions */
@@ -1142,7 +1194,6 @@ select.form-control {
 }
 
 .task-item.completed {
-  opacity: 0.7;
   background-color: var(--color-pastel-green);
 }
 
@@ -1165,7 +1216,49 @@ select.form-control {
 
 .task-item.completed .task-title {
   text-decoration: line-through;
-  color: var(--color-text-secondary);
+  color: var(--color-slate-900);
+}
+
+.task-item.completed .task-description,
+.task-item.completed .task-meta,
+.task-item.completed .task-tag,
+.task-item.completed .due-date {
+  color: var(--color-slate-900);
+}
+
+.task-item.completed .priority-badge {
+  color: var(--color-slate-900);
+}
+
+/* Dark theme overrides for completed task actions */
+@media (prefers-color-scheme: dark) {
+  .task-item.completed .task-action-btn {
+    background-color: rgba(0, 0, 0, 0.35);
+    color: var(--color-gray-200);
+    border-color: var(--color-card-border);
+  }
+  .task-item.completed .task-action-btn:hover {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+  .task-item.completed .task-action-btn.complete,
+  .task-item.completed .task-action-btn.edit,
+  .task-item.completed .task-action-btn.delete {
+    color: var(--color-gray-200);
+  }
+}
+
+[data-color-scheme="dark"] .task-item.completed .task-action-btn {
+  background-color: rgba(0, 0, 0, 0.35);
+  color: var(--color-gray-200);
+  border-color: var(--color-card-border);
+}
+[data-color-scheme="dark"] .task-item.completed .task-action-btn:hover {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+[data-color-scheme="dark"] .task-item.completed .task-action-btn.complete,
+[data-color-scheme="dark"] .task-item.completed .task-action-btn.edit,
+[data-color-scheme="dark"] .task-item.completed .task-action-btn.delete {
+  color: var(--color-gray-200);
 }
 
 .task-description {
@@ -1229,6 +1322,22 @@ select.form-control {
   flex-wrap: wrap;
 }
 
+.subtasks-list {
+  list-style: none;
+  margin: var(--space-8) 0 0 0;
+  padding: 0 0 0 var(--space-8);
+  border-left: 2px solid var(--color-card-border);
+}
+
+.subtask {
+  margin: var(--space-4) 0;
+}
+
+.subtask .subtask-text {
+  margin-left: var(--space-8);
+  color: var(--color-text);
+}
+
 .task-tag {
   padding: var(--space-2) var(--space-6);
   background-color: var(--color-pastel-purple);
@@ -1252,16 +1361,35 @@ select.form-control {
   }
   .tag-pill,
   .task-tag {
-    color: var(--color-gray-200);
+    color: var(--color-slate-900);
     border-color: var(--color-card-border);
     box-shadow: none;
+  }
+  .task-item.completed .task-title,
+  .task-item.completed .task-description,
+  .task-item.completed .task-meta,
+  .task-item.completed .task-tag,
+  .task-item.completed .due-date,
+  .task-item.completed .priority-badge {
+    color: var(--color-slate-900);
+  }
+  /* Dark mode: default task count pill for non-active nav */
+  .task-count {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: var(--color-gray-200);
+    border: 1px solid var(--color-card-border);
+    font-weight: var(--font-weight-medium);
   }
   .nav-item.active {
     color: var(--color-slate-900);
   }
   .nav-item.active .task-count {
-    background-color: rgba(255, 255, 255, 0.18);
+    background-color: rgba(255, 255, 255, 0.24);
     color: var(--color-slate-900);
+    font-weight: var(--font-weight-bold);
+  }
+  .subtasks-container {
+    background-color: rgba(8, 145, 178, 0.15); /* dark cyan tint */
   }
 }
 
@@ -1274,11 +1402,54 @@ select.form-control {
     var(--color-surface);
 }
 
+[data-color-scheme="dark"] .task-count {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: var(--color-gray-200);
+  border: 1px solid var(--color-card-border);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Ensure light mode task-count remains clean and readable */
+@media (prefers-color-scheme: light) {
+  .task-count {
+    background-color: var(--color-secondary);
+    color: var(--color-slate-900);
+    border: 1px solid transparent;
+    font-weight: var(--font-weight-medium);
+  }
+  .nav-item.active .task-count {
+    background-color: rgba(0, 0, 0, 0.08);
+    color: var(--color-slate-900);
+    font-weight: var(--font-weight-bold);
+  }
+}
+
+[data-color-scheme="light"] .task-count {
+  background-color: var(--color-secondary);
+  color: var(--color-slate-900);
+  border: 1px solid transparent;
+  font-weight: var(--font-weight-medium);
+}
+[data-color-scheme="light"] .nav-item.active .task-count {
+  background-color: rgba(0, 0, 0, 0.08);
+  color: var(--color-slate-900);
+  font-weight: var(--font-weight-bold);
+}
+
 [data-color-scheme="dark"] .tag-pill,
 [data-color-scheme="dark"] .task-tag {
-  color: var(--color-gray-200);
+  color: var(--color-slate-900);
   border-color: var(--color-card-border);
   box-shadow: none;
+}
+
+[data-color-scheme="dark"] .task-item.completed .task-title,
+[data-color-scheme="dark"] .task-item.completed .task-description,
+[data-color-scheme="dark"] .task-item.completed .task-meta,
+[data-color-scheme="dark"] .task-item.completed .task-tag,
+[data-color-scheme="dark"] .task-item.completed .due-date,
+[data-color-scheme="dark"] .task-item.completed .priority-badge {
+  color: var(--color-slate-900);
 }
 
 [data-color-scheme="dark"] .nav-item.active {
@@ -1286,8 +1457,9 @@ select.form-control {
 }
 
 [data-color-scheme="dark"] .nav-item.active .task-count {
-  background-color: rgba(255, 255, 255, 0.18);
+  background-color: rgba(255, 255, 255, 0.24);
   color: var(--color-slate-900);
+  font-weight: var(--font-weight-bold);
 }
 
 .task-actions {
@@ -1302,19 +1474,26 @@ select.form-control {
 }
 
 .task-action-btn {
-  padding: var(--space-6);
+  padding: var(--space-8);
   background: none;
-  border: none;
-  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
   cursor: pointer;
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: all var(--duration-fast) var(--ease-standard);
 }
 
 .task-action-btn:hover {
   background-color: var(--color-secondary);
   color: var(--color-text);
+  border-color: var(--color-border);
 }
 
 .task-action-btn.complete {
@@ -1327,6 +1506,27 @@ select.form-control {
 
 .task-action-btn.delete {
   color: var(--color-error);
+}
+
+/* Completed task: keep actions visible and high-contrast on green bg */
+.task-item.completed .task-actions {
+  opacity: 1;
+}
+
+.task-item.completed .task-action-btn {
+  background-color: rgba(255, 255, 255, 0.75);
+  border-color: var(--color-card-border);
+  color: var(--color-slate-900);
+}
+
+.task-item.completed .task-action-btn:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.task-item.completed .task-action-btn.complete,
+.task-item.completed .task-action-btn.edit,
+.task-item.completed .task-action-btn.delete {
+  color: var(--color-slate-900);
 }
 
 /* Modal Styles */
@@ -1504,4 +1704,15 @@ select.form-control {
   border-color: var(--color-primary);
   box-shadow: var(--focus-ring);
   outline: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .checkbox-custom {
+    border-color: var(--color-gray-300);
+    background-color: rgba(255, 255, 255, 0.02);
+  }
+  .checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
+    background-color: var(--color-teal-300);
+    border-color: var(--color-teal-300);
+  }
 }

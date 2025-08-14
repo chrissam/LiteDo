@@ -11,6 +11,13 @@ class TodoApp {
         this.subtasks = [];
         this.fileHandle = null; // FileSystemFileHandle when a file is opened
         this.autoSave = false;
+        this.isFileSystemSupported = !!(window.showOpenFilePicker && window.showSaveFilePicker);
+        this.lastFileModifiedMs = null;
+        this._debounceTimer = null;
+        this.autoReloadEnabled = false;
+        this.quickDownloadEnabled = false; // removed UI, keeping flag unused
+        this.autoReloadMs = 5000;
+        this._autoReloadTimer = null;
         
         this.init();
     }
@@ -21,6 +28,9 @@ class TodoApp {
         this.render();
         this.updateCounts();
         this.updateFileStatus();
+        this.setupFileSupportUI();
+        this.setupAutoReloadOnFocus();
+        this.tryReopenLastFile();
     }
 
     // Load data from localStorage or use sample data
@@ -85,8 +95,8 @@ class TodoApp {
         } catch (e) {
             console.error('Error saving tasks:', e);
         }
-        if (this.autoSave && this.fileHandle) {
-            this.persistToFile().catch(err => console.error('Auto-save failed:', err));
+        if (this.autoSave && this.fileHandle && this.isFileSystemSupported) {
+            this.persistToFileDebounced();
         }
         this.updateFileStatus();
     }
@@ -99,6 +109,27 @@ class TodoApp {
             addTaskForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 this.addTask();
+            });
+        }
+
+        // Collapse composer
+        const toggleComposerBtn = document.getElementById('toggleComposerBtn');
+        if (toggleComposerBtn) {
+            toggleComposerBtn.addEventListener('click', () => {
+                const section = document.getElementById('addTaskSection');
+                const form = document.getElementById('addTaskForm');
+                const expanded = toggleComposerBtn.getAttribute('aria-expanded') === 'true';
+                if (expanded) {
+                    form.style.display = 'none';
+                    toggleComposerBtn.textContent = '+';
+                    toggleComposerBtn.setAttribute('aria-expanded', 'false');
+                    toggleComposerBtn.setAttribute('aria-label', 'Show composer');
+                } else {
+                    form.style.display = '';
+                    toggleComposerBtn.textContent = '−';
+                    toggleComposerBtn.setAttribute('aria-expanded', 'true');
+                    toggleComposerBtn.setAttribute('aria-label', 'Hide composer');
+                }
             });
         }
 
@@ -145,6 +176,17 @@ class TodoApp {
             });
         }
 
+        // Show tags panel toggle
+        const showTagsPanel = document.getElementById('showTagsPanel');
+        if (showTagsPanel) {
+            const section = document.getElementById('tagsSection');
+            if (section) section.style.display = 'none';
+            showTagsPanel.addEventListener('change', (e) => {
+                if (!section) return;
+                section.style.display = e.target.checked ? '' : 'none';
+            });
+        }
+
         // Sort dropdown
         const sortBy = document.getElementById('sortBy');
         if (sortBy) {
@@ -152,6 +194,24 @@ class TodoApp {
                 this.currentSort = e.target.value;
                 this.render();
             });
+        }
+
+        // Tag search filter
+        const tagSearchInput = document.getElementById('tagSearchInput');
+        if (tagSearchInput) {
+            tagSearchInput.addEventListener('input', () => {
+                this.renderTags();
+            });
+        }
+
+        // Search help modal
+        const searchHelpBtn = document.getElementById('searchHelpBtn');
+        if (searchHelpBtn) {
+            searchHelpBtn.addEventListener('click', () => this.showModal('searchHelpModal'));
+        }
+        const closeSearchHelpBtn = document.getElementById('closeSearchHelpBtn');
+        if (closeSearchHelpBtn) {
+            closeSearchHelpBtn.addEventListener('click', () => this.hideModal('searchHelpModal'));
         }
 
         // Bulk actions
@@ -181,6 +241,12 @@ class TodoApp {
         if (addSubtaskBtn) {
             addSubtaskBtn.addEventListener('click', () => {
                 this.showSubtaskContainer();
+            });
+        }
+        const editAddSubtaskBtn = document.getElementById('editAddSubtaskBtn');
+        if (editAddSubtaskBtn) {
+            editAddSubtaskBtn.addEventListener('click', () => {
+                this.addSubtaskInput(true);
             });
         }
 
@@ -241,17 +307,64 @@ class TodoApp {
             importBtn.addEventListener('click', () => importFileInput.click());
             importFileInput.addEventListener('change', (e) => this.importTasks(e));
         }
+        const newFileBtn = document.getElementById('newFileBtn');
+        if (newFileBtn) {
+            newFileBtn.addEventListener('click', () => this.createNewFile());
+        }
         const openFileBtn = document.getElementById('openFileBtn');
         if (openFileBtn) {
             openFileBtn.addEventListener('click', () => this.openFile());
         }
         const saveFileBtn = document.getElementById('saveFileBtn');
         if (saveFileBtn) {
-            saveFileBtn.addEventListener('click', () => this.persistToFile());
+            saveFileBtn.addEventListener('click', () => this.persistToFile(false));
         }
         const saveAsFileBtn = document.getElementById('saveAsFileBtn');
         if (saveAsFileBtn) {
             saveAsFileBtn.addEventListener('click', () => this.persistToFile(true));
+        }
+        const autoReloadToggle = document.getElementById('autoReloadToggle');
+        if (autoReloadToggle) {
+            const saved = localStorage.getItem('fancyTasks_autoReload') === 'true';
+            autoReloadToggle.checked = saved;
+            this.autoReloadEnabled = saved;
+            autoReloadToggle.addEventListener('change', (e) => {
+                this.autoReloadEnabled = e.target.checked;
+                localStorage.setItem('fancyTasks_autoReload', this.autoReloadEnabled ? 'true' : 'false');
+            });
+        }
+
+        const reopenToggle = document.getElementById('reopenOnStartupToggle');
+        if (reopenToggle) {
+            const saved = localStorage.getItem('fancyTasks_reopen') === 'true';
+            reopenToggle.checked = saved;
+            this.reopenOnStartup = saved;
+            reopenToggle.addEventListener('change', (e) => {
+                this.reopenOnStartup = e.target.checked;
+                localStorage.setItem('fancyTasks_reopen', this.reopenOnStartup ? 'true' : 'false');
+                if (!this.reopenOnStartup) {
+                    this.deleteStoredHandle().catch(() => {});
+                } else if (this.fileHandle) {
+                    this.setStoredHandle(this.fileHandle).catch(() => {});
+                }
+            });
+        }
+
+        const autoReloadInterval = document.getElementById('autoReloadInterval');
+        if (autoReloadInterval) {
+            const saved = parseInt(localStorage.getItem('fancyTasks_autoReloadMs') || '5000', 10);
+            if (!Number.isNaN(saved) && saved >= 2000) {
+                this.autoReloadMs = saved;
+                autoReloadInterval.value = String(Math.round(saved / 1000));
+            } else {
+                autoReloadInterval.value = String(Math.round(this.autoReloadMs / 1000));
+            }
+            autoReloadInterval.addEventListener('change', () => {
+                const seconds = Math.max(2, parseInt(autoReloadInterval.value || '5', 10));
+                this.autoReloadMs = seconds * 1000;
+                localStorage.setItem('fancyTasks_autoReloadMs', String(this.autoReloadMs));
+                this.resetAutoReloadTimer();
+            });
         }
         const autoSaveToggle = document.getElementById('autoSaveToggle');
         if (autoSaveToggle) {
@@ -299,6 +412,8 @@ class TodoApp {
             editTaskModal.addEventListener('click', (e) => {
                 if (e.target.classList.contains('modal')) {
                     this.hideModal('editTaskModal');
+                    const c = document.getElementById('subtasksContainer');
+                    if (c) { c.style.display = 'none'; c.innerHTML = ''; this.subtasks = []; }
                 }
             });
         }
@@ -312,7 +427,7 @@ class TodoApp {
                 if (search) { e.preventDefault(); search.focus(); }
             }
             // Open analytics
-            if ((e.altKey && (e.key === 'a' || e.key === 'A')) && !isInput) {
+            if (((e.altKey && (e.key === 'a' || e.key === 'A')) || (e.shiftKey && (e.key === '?' || e.key === '/'))) && !isInput) {
                 e.preventDefault(); this.showAnalytics();
             }
             // New task focus
@@ -329,7 +444,7 @@ class TodoApp {
             }
             // Save file with Cmd/Ctrl+S
             if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) {
-                e.preventDefault(); this.persistToFile();
+                e.preventDefault(); this.persistToFile(false);
             }
             // Escape closes modals or clears search
             if (e.key === 'Escape') {
@@ -355,14 +470,88 @@ class TodoApp {
         // 'auto' uses system preference via CSS media queries
     }
 
+    setupFileSupportUI() {
+        const saveBtn = document.getElementById('saveFileBtn');
+        const saveAsBtn = document.getElementById('saveAsFileBtn');
+        const autoSaveToggle = document.getElementById('autoSaveToggle');
+        const quickDlToggle = document.getElementById('quickDownloadToggle');
+        if (!this.isFileSystemSupported) {
+            // Hide Save/Save As for non-Chromium to avoid confusion; rely on Export/Import
+            if (saveBtn) { saveBtn.style.display = 'none'; }
+            if (saveAsBtn) { saveAsBtn.style.display = 'none'; }
+            if (autoSaveToggle) { autoSaveToggle.disabled = true; autoSaveToggle.title = 'Auto-save not supported in this browser'; }
+            if (quickDlToggle) { quickDlToggle.parentElement.style.display = 'none'; }
+            const status = document.getElementById('fileStatus');
+            if (status) status.textContent = 'Firefox: using download-based saving. Consider Chrome for direct file editing.';
+        }
+    }
+
+    setupAutoReloadOnFocus() {
+        const maybeReload = async () => {
+            if (!this.autoReloadEnabled) return;
+            if (this.fileHandle && this.isFileSystemSupported) {
+                try {
+                    const file = await this.fileHandle.getFile();
+                    if (this.lastFileModifiedMs && file.lastModified && file.lastModified > this.lastFileModifiedMs) {
+                        const text = await file.text();
+                        const data = JSON.parse(text);
+                        const tasks = Array.isArray(data) ? data : data.tasks;
+                        if (Array.isArray(tasks)) {
+                            this.tasks = tasks;
+                            try { localStorage.setItem('fancyTasks', JSON.stringify(this.tasks)); } catch (_) {}
+                            this.render();
+                            this.updateCounts();
+                            this.updateFileStatus('Reloaded');
+                        }
+                    }
+                } catch (_) {
+                    // ignore
+                }
+            }
+        };
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') maybeReload();
+        });
+        this._autoReloadTimer = setInterval(maybeReload, this.autoReloadMs);
+    }
+
+    resetAutoReloadTimer() {
+        if (this._autoReloadTimer) clearInterval(this._autoReloadTimer);
+        const maybeReload = async () => {
+            if (!this.autoReloadEnabled) return;
+            if (this.fileHandle && this.isFileSystemSupported) {
+                try {
+                    const file = await this.fileHandle.getFile();
+                    if (this.lastFileModifiedMs && file.lastModified && file.lastModified > this.lastFileModifiedMs) {
+                        const text = await file.text();
+                        const data = JSON.parse(text);
+                        const tasks = Array.isArray(data) ? data : data.tasks;
+                        if (Array.isArray(tasks)) {
+                            this.tasks = tasks;
+                            try { localStorage.setItem('fancyTasks', JSON.stringify(this.tasks)); } catch (_) {}
+                            this.render();
+                            this.updateCounts();
+                            this.updateFileStatus('Reloaded');
+                        }
+                    }
+                } catch (_) {}
+            }
+        };
+        this._autoReloadTimer = setInterval(maybeReload, this.autoReloadMs);
+    }
+
     // Generate unique ID
     generateId() {
         return Date.now().toString() + Math.random().toString(36).substr(2, 9);
     }
 
-    // Get current date in YYYY-MM-DD format
+    // Get current local date in YYYY-MM-DD format (no UTC shift)
     getCurrentDate() {
-        return new Date().toISOString().split('T')[0];
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
     }
 
     // Add new task
@@ -383,7 +572,11 @@ class TodoApp {
         const dueDate = dueDateInput.value;
         const priority = priorityInput.value;
         const tagsInputValue = tagsInput.value.trim();
-        const tags = tagsInputValue ? tagsInputValue.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+        let tags = tagsInputValue ? tagsInputValue.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+        if (tags.length > 5) {
+            alert('You can add up to 5 tags. Extra tags will be ignored.');
+            tags = tags.slice(0, 5);
+        }
 
         if (!title) {
             alert('Please enter a task title');
@@ -399,7 +592,9 @@ class TodoApp {
             dueDate,
             tags,
             createdDate: this.getCurrentDate(),
-            subtasks: [...this.subtasks]
+            createdTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            subtasks: [...this.subtasks],
+            subtasksDone: this.subtasks.length ? new Array(this.subtasks.length).fill(false) : []
         };
 
         this.tasks.unshift(newTask);
@@ -432,11 +627,12 @@ class TodoApp {
         }
     }
 
-    // Add subtask input
-    addSubtaskInput() {
-        const container = document.getElementById('subtasksContainer');
+    // Add subtask input (newTask = false uses add form; true uses edit modal)
+    addSubtaskInput(isEdit = false, initialValue = '') {
+        const container = document.getElementById(isEdit ? 'editSubtasksContainer' : 'subtasksContainer');
         if (!container) return;
 
+        container.style.display = 'block';
         const subtaskDiv = document.createElement('div');
         subtaskDiv.className = 'subtask-item';
         
@@ -444,6 +640,7 @@ class TodoApp {
         input.type = 'text';
         input.className = 'subtask-input';
         input.placeholder = 'Enter subtask...';
+        input.value = initialValue;
         
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
@@ -451,11 +648,19 @@ class TodoApp {
         removeBtn.innerHTML = '×';
         removeBtn.addEventListener('click', () => {
             subtaskDiv.remove();
-            this.updateSubtasks();
+            if (isEdit) {
+                this.updateEditSubtasks();
+            } else {
+                this.updateSubtasks();
+            }
         });
 
         input.addEventListener('input', () => {
-            this.updateSubtasks();
+            if (isEdit) {
+                this.updateEditSubtasks();
+            } else {
+                this.updateSubtasks();
+            }
         });
         
         subtaskDiv.appendChild(input);
@@ -466,7 +671,27 @@ class TodoApp {
     // Update subtasks array
     updateSubtasks() {
         const inputs = document.querySelectorAll('.subtask-input');
-        this.subtasks = Array.from(inputs).map(input => input.value.trim()).filter(text => text);
+        // Only count inputs in the add form container
+        const addContainer = document.getElementById('subtasksContainer');
+        const arr = [];
+        inputs.forEach(inp => { if (addContainer && addContainer.contains(inp)) arr.push(inp.value.trim()); });
+        this.subtasks = arr.filter(text => text);
+        // Hide container if no inputs or all empty
+        if (addContainer) {
+            const hasAny = addContainer.querySelectorAll('.subtask-item').length > 0;
+            const anyValue = this.subtasks.length > 0;
+            if (!hasAny || !anyValue) {
+                addContainer.style.display = 'none';
+                addContainer.innerHTML = '';
+            }
+        }
+    }
+
+    updateEditSubtasks() {
+        const editContainer = document.getElementById('editSubtasksContainer');
+        if (!editContainer) return [];
+        const inputs = editContainer.querySelectorAll('.subtask-input');
+        return Array.from(inputs).map(i => i.value.trim()).filter(v => v);
     }
 
     // Toggle task completion
@@ -479,6 +704,33 @@ class TodoApp {
             this.render();
             this.updateCounts();
         }
+    }
+
+    // Toggle subtask completion; all complete -> marks task completed
+    toggleSubtask(taskId, index) {
+        const task = this.tasks.find(t => t.id === taskId);
+        if (!task || !Array.isArray(task.subtasks)) return;
+        // store per-task subtask state
+        if (!Array.isArray(task.subtasksDone)) task.subtasksDone = new Array(task.subtasks.length).fill(false);
+        // if subtasks length changed, resize
+        if (task.subtasksDone.length !== task.subtasks.length) {
+            const newDone = new Array(task.subtasks.length).fill(false);
+            for (let i = 0; i < Math.min(task.subtasksDone.length, newDone.length); i++) newDone[i] = !!task.subtasksDone[i];
+            task.subtasksDone = newDone;
+        }
+        task.subtasksDone[index] = !task.subtasksDone[index];
+        const allDone = task.subtasks.length > 0 && task.subtasksDone.every(Boolean);
+        if (allDone) {
+            task.completed = true;
+            task.completedDate = this.getCurrentDate();
+        } else if (task.completed) {
+            // if a subtask gets unchecked, uncomplete parent
+            task.completed = false;
+            task.completedDate = null;
+        }
+        this.saveData();
+        this.render();
+        this.updateCounts();
     }
 
     // Delete task
@@ -510,6 +762,18 @@ class TodoApp {
             if (editTaskPriority) editTaskPriority.value = task.priority;
             if (editTaskTags) editTaskTags.value = task.tags.join(', ');
 
+            // Populate subtasks
+            const editSubtasksContainer = document.getElementById('editSubtasksContainer');
+            if (editSubtasksContainer) {
+                editSubtasksContainer.innerHTML = '';
+                if (task.subtasks && task.subtasks.length) {
+                    editSubtasksContainer.style.display = 'block';
+                    task.subtasks.forEach(st => this.addSubtaskInput(true, st));
+                } else {
+                    editSubtasksContainer.style.display = 'none';
+                }
+            }
+
             this.showModal('editTaskModal');
         }
     }
@@ -535,7 +799,23 @@ class TodoApp {
             if (editTaskPriority) task.priority = editTaskPriority.value;
             if (editTaskTags) {
                 const tagsInputValue = editTaskTags.value.trim();
-                task.tags = tagsInputValue ? tagsInputValue.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+                let t = tagsInputValue ? tagsInputValue.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+                if (t.length > 5) {
+                    alert('You can add up to 5 tags. Extra tags will be ignored.');
+                    t = t.slice(0, 5);
+                }
+                task.tags = t;
+            }
+            // Update subtasks from edit modal
+            const newSubs = this.updateEditSubtasks();
+            if (Array.isArray(newSubs)) {
+                task.subtasks = newSubs;
+                // rebuild subtasksDone aligned to new subtasks
+                const newDone = new Array(task.subtasks.length).fill(false);
+                if (Array.isArray(task.subtasksDone)) {
+                    for (let i = 0; i < Math.min(task.subtasksDone.length, newDone.length); i++) newDone[i] = !!task.subtasksDone[i];
+                }
+                task.subtasksDone = newDone;
             }
             
             this.saveData();
@@ -635,17 +915,22 @@ class TodoApp {
         }
         if (current) tokens.push(current);
         const clauses = tokens.map(tok => {
-            const m = tok.match(/^([a-zA-Z]+):(.*)$/);
+            const m = tok.match(/^\s*([a-zA-Z_\-]+)\s*:\s*(.*)$/);
             if (!m) {
                 const needle = tok.replace(/^"|"$/g, '').toLowerCase();
                 return task => task.title.toLowerCase().includes(needle) ||
                                task.description.toLowerCase().includes(needle) ||
                                task.tags.some(t => t.toLowerCase().includes(needle));
             }
-            const key = m[1].toLowerCase();
-            let value = m[2].replace(/^"|"$/g, '');
-            switch (key) {
-                case 'tag': return task => task.tags.some(t => t.toLowerCase() === value.toLowerCase());
+            const key = (m[1] || '').toLowerCase();
+            const normKey = key.replace(/[_-]/g, '');
+            let value = (m[2] || '').trim().replace(/^"|"$/g, '');
+            switch (normKey) {
+                case 'tag': {
+                    // support tag:one tag:two (AND)
+                    const val = value.toLowerCase();
+                    return task => task.tags.some(t => t.toLowerCase() === val);
+                }
                 case 'priority': return task => (task.priority || '').toLowerCase() === value.toLowerCase();
                 case 'completed': {
                     const flag = value.toLowerCase() === 'true';
@@ -662,7 +947,23 @@ class TodoApp {
                 case 'before': return task => task.dueDate && task.dueDate < value;
                 case 'after': return task => task.dueDate && task.dueDate > value;
                 case 'due': return task => task.dueDate === value;
-                case 'created': return task => task.createdDate === value;
+                case 'created': {
+                    const v = value.toLowerCase();
+                    const today = this.getCurrentDate();
+                    if (v === 'today') return task => task.createdDate === today;
+                    if (v === 'yesterday') {
+                        const d = new Date();
+                        d.setDate(d.getDate() - 1);
+                        const yyyy = d.getFullYear();
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        const y = `${yyyy}-${mm}-${dd}`;
+                        return task => task.createdDate === y;
+                    }
+                    return task => task.createdDate === value;
+                }
+                case 'createdbefore': return task => task.createdDate && task.createdDate < value;
+                case 'createdafter': return task => task.createdDate && task.createdDate > value;
                 case 'text': {
                     const needle = value.toLowerCase();
                     return task => task.title.toLowerCase().includes(needle) || task.description.toLowerCase().includes(needle);
@@ -683,6 +984,15 @@ class TodoApp {
         // Filter by search (supports advanced operators)
         if (this.currentSearch) {
             const predicate = this.parseQuery(this.currentSearch.trim());
+            // For multiple tag: tokens (AND), parse again and pre-filter
+            const tagTokens = this.currentSearch.match(/(^|\s)tag\s*:\s*("[^"]+"|'[^']+'|[^\s]+)/gi) || [];
+            if (tagTokens.length > 1) {
+                const required = tagTokens.map(t => {
+                    const raw = t.split(':')[1].trim();
+                    return raw.replace(/^"|"$/g, '').replace(/^'|'$/g, '').toLowerCase();
+                });
+                filtered = filtered.filter(task => required.every(req => task.tags.map(x => x.toLowerCase()).includes(req)));
+            }
             filtered = filtered.filter(predicate);
         }
 
@@ -742,21 +1052,19 @@ class TodoApp {
         return Array.from(tags).sort();
     }
 
-    // Format date for display
+    // Format date for display (local-safe)
     formatDate(dateString) {
         if (!dateString) return '';
-        const date = new Date(dateString);
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        if (dateString === this.getCurrentDate()) {
-            return 'Today';
-        } else if (dateString === tomorrow.toISOString().split('T')[0]) {
-            return 'Tomorrow';
-        } else {
-            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        }
+        const [y, m, d] = dateString.split('-').map(Number);
+        const date = new Date(y, (m - 1), d);
+        const todayStr = this.getCurrentDate();
+        const t = new Date();
+        const tomorrowLocal = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+        tomorrowLocal.setDate(tomorrowLocal.getDate() + 1);
+        const tomorrowStr = `${tomorrowLocal.getFullYear()}-${String(tomorrowLocal.getMonth() + 1).padStart(2, '0')}-${String(tomorrowLocal.getDate()).padStart(2, '0')}`;
+        if (dateString === todayStr) return 'Today';
+        if (dateString === tomorrowStr) return 'Tomorrow';
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
 
     // Get due date class
@@ -805,13 +1113,28 @@ class TodoApp {
                         
                         <div class="task-meta">
                             <span class="priority-badge priority-${task.priority.toLowerCase()}">${task.priority}</span>
+                            <span class="due-date">Created: ${this.escapeHtml(task.createdDate)} ${task.createdTime ? this.escapeHtml(task.createdTime) : ''}</span>
                             ${task.dueDate ? `<span class="due-date ${this.getDueDateClass(task.dueDate)}">${this.formatDate(task.dueDate)}</span>` : ''}
                         </div>
                         
                         ${task.tags.length > 0 ? `
                             <div class="task-tags">
-                                ${task.tags.map(tag => `<span class="task-tag">${this.escapeHtml(tag)}</span>`).join('')}
+                                ${task.tags.map(tag => `<span class=\"task-tag\">${this.escapeHtml(tag)}</span>`).join('')}
                             </div>
+                        ` : ''}
+
+                        ${task.subtasks && task.subtasks.length ? `
+                            <ul class=\"subtasks-list\">${task.subtasks.map((st, idx) => {
+                                const done = Array.isArray(task.subtasksDone) && task.subtasksDone[idx];
+                                return `
+                                <li class=\"subtask\">
+                                    <label class=\"checkbox-label task-checkbox\">
+                                        <input type=\"checkbox\" ${done ? 'checked' : ''} onchange=\"window.app.toggleSubtask('${task.id}', ${idx})\">
+                                        <span class=\"checkbox-custom\"></span>
+                                        <span class=\"subtask-text\">${this.escapeHtml(st)}</span>
+                                    </label>
+                                </li>`;}).join('')}
+                            </ul>
                         ` : ''}
                     </div>
                     
@@ -836,7 +1159,10 @@ class TodoApp {
 
     // Render tags
     renderTags() {
-        const tags = this.getAllTags();
+        const tagSearchInput = document.getElementById('tagSearchInput');
+        const q = tagSearchInput ? tagSearchInput.value.trim().toLowerCase() : '';
+        let tags = this.getAllTags();
+        if (q) tags = tags.filter(t => t.toLowerCase().includes(q));
         const tagsContainer = document.getElementById('tagsContainer');
         
         if (!tagsContainer) return;
@@ -844,11 +1170,15 @@ class TodoApp {
         if (tags.length === 0) {
             tagsContainer.innerHTML = '<p style="color: var(--color-text-secondary); font-size: var(--font-size-xs);">No tags yet</p>';
         } else {
-            tagsContainer.innerHTML = tags.map(tag => `
+            const visible = tags.slice(0, 20);
+            const overflow = tags.length - visible.length;
+            tagsContainer.innerHTML = visible.map(tag => `
                 <button class="tag-pill ${this.activeTag === tag ? 'active' : ''}" onclick="window.app.toggleTag('${tag}')">
                     ${this.escapeHtml(tag)}
                 </button>
-            `).join('');
+            `).join('') + (overflow > 0 ? `
+                <button class="tag-pill" title="${overflow} more tags hidden">+${overflow}</button>
+            ` : '');
         }
     }
 
@@ -900,7 +1230,10 @@ class TodoApp {
         const daysAgo = (n) => {
             const d = new Date();
             d.setDate(d.getDate() - n);
-            return d.toISOString().split('T')[0];
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
         };
         const completed7d = this.tasks.filter(t => t.completed && t.completedDate && t.completedDate >= daysAgo(7)).length;
         const completed30d = this.tasks.filter(t => t.completed && t.completedDate && t.completedDate >= daysAgo(30)).length;
@@ -933,7 +1266,7 @@ class TodoApp {
     }
 
     // Export tasks
-    exportTasks() {
+    exportTasks(showPrompt = false) {
         const data = {
             exportDate: new Date().toISOString(),
             tasks: this.tasks
@@ -941,19 +1274,71 @@ class TodoApp {
         
         try {
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `fancy-tasks-export-${this.getCurrentDate()}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            if (showPrompt && window.showSaveFilePicker) {
+                // Chromium: let user pick location
+                (async () => {
+                    try {
+                        const handle = await window.showSaveFilePicker({
+                            suggestedName: `fancy-tasks-export-${this.getCurrentDate()}.json`,
+                            types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+                        });
+                        const writable = await handle.createWritable();
+                        await writable.write(blob);
+                        await writable.close();
+                        alert('Exported successfully');
+                    } catch (err) {
+                        if (err && err.name !== 'AbortError') alert('Export failed: ' + err.message);
+                    }
+                })();
+            } else {
+                // Download (Firefox default behavior) — user can choose prompt behavior in browser settings
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `fancy-tasks-export-${this.getCurrentDate()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
             
             alert('Tasks exported successfully!');
         } catch (e) {
             console.error('Export error:', e);
             alert('Export failed. Please try again.');
+        }
+    }
+
+    async createNewFile() {
+        // Clears current tasks and lets user pick a new file location (Chromium) or starts a fresh in-memory set
+        if (!confirm('Start fresh? This will clear current tasks (you can Export them first).')) return;
+        this.tasks = [];
+        this.selectedTasks.clear();
+        this.currentSearch = '';
+        this.activeTag = null;
+        this.currentFilter = 'all';
+        this.subtasks = [];
+        this.fileHandle = null;
+        this.lastFileModifiedMs = null;
+        try { localStorage.setItem('fancyTasks', JSON.stringify(this.tasks)); } catch (_) {}
+        this.render();
+        this.updateCounts();
+        this.updateSelectedCount();
+        this.toggleClearSearch();
+        this.updateFileStatus('Fresh');
+
+        if (window.showSaveFilePicker) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: `fancy-tasks-${this.getCurrentDate()}.json`,
+                    types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+                });
+                this.fileHandle = handle;
+                await this.persistToFile(false);
+                this.updateFileStatus('New file created');
+            } catch (err) {
+                if (err && err.name !== 'AbortError') alert('New file creation failed: ' + err.message);
+            }
         }
     }
 
@@ -1016,6 +1401,32 @@ class TodoApp {
     }
 
     // File System Access API helpers
+    async verifyPermission(fileHandle, readWrite = false) {
+        if (!fileHandle) return false;
+        try {
+            const opts = { mode: readWrite ? 'readwrite' : 'read' };
+            if (fileHandle.queryPermission && await fileHandle.queryPermission(opts) === 'granted') return true;
+            if (fileHandle.requestPermission && await fileHandle.requestPermission(opts) === 'granted') return true;
+        } catch (_) {}
+        return true;
+    }
+
+    computePayloadString() {
+        return JSON.stringify({
+            exportDate: new Date().toISOString(),
+            // optimistic concurrency token derived from last known modified time
+            lastKnownModifiedMs: this.lastFileModifiedMs || null,
+            tasks: this.tasks
+        }, null, 2);
+    }
+
+    persistToFileDebounced() {
+        clearTimeout(this._debounceTimer);
+        this._debounceTimer = setTimeout(() => {
+            this.persistToFile().catch(err => console.error('Auto-save failed:', err));
+        }, 400);
+    }
+
     async openFile() {
         if (!window.showOpenFilePicker) {
             alert('Your browser does not support opening files directly. Use Import instead.');
@@ -1026,16 +1437,25 @@ class TodoApp {
                 types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
             });
             this.fileHandle = handle;
+            await this.verifyPermission(this.fileHandle, true);
             const file = await handle.getFile();
             const text = await file.text();
             const data = JSON.parse(text);
             const tasks = Array.isArray(data) ? data : data.tasks;
             if (!Array.isArray(tasks)) throw new Error('Invalid format');
             this.tasks = tasks;
+            this.lastFileModifiedMs = file.lastModified || Date.now();
             this.saveData();
             this.render();
             this.updateCounts();
             this.updateFileStatus();
+            // Persist token for reopening on startup (Origin Private File System token)
+            try {
+                if (this.reopenOnStartup && handle && handle.kind === 'file') {
+                    await this.setStoredHandle(handle);
+                    localStorage.setItem('fancyTasks_lastFileName', handle.name);
+                }
+            } catch (_) {}
         } catch (err) {
             if (err && err.name === 'AbortError') return;
             console.error('Open failed:', err);
@@ -1045,8 +1465,19 @@ class TodoApp {
 
     async persistToFile(forceSaveAs = false) {
         if (!window.showSaveFilePicker) {
-            // Fallback: trigger normal export
-            this.exportTasks();
+            // Firefox/Safari fallback: download file; if quickDownloadEnabled, use same filename hint
+            const payload = this.computePayloadString();
+            const blob = new Blob([payload], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const base = this.fileHandle && this.fileHandle.name ? this.fileHandle.name.replace(/\s+/g, '-') : `fancy-tasks-${this.getCurrentDate()}.json`;
+            a.download = base;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            this.updateFileStatus('Downloaded');
             return;
         }
         try {
@@ -1057,12 +1488,35 @@ class TodoApp {
                     types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
                 });
             }
+            await this.verifyPermission(handle, true);
+            // Concurrency guard: check lastModified before write
+            try {
+                const curFile = await handle.getFile();
+                const curMs = curFile.lastModified || 0;
+                if (this.lastFileModifiedMs && curMs > this.lastFileModifiedMs) {
+                    const proceed = confirm('The file has changed on disk since you opened it. Overwrite anyway?');
+                    if (!proceed) { this.updateFileStatus('Save cancelled'); return; }
+                }
+            } catch (_) {}
             const writable = await handle.createWritable();
-            const payload = JSON.stringify({ exportDate: new Date().toISOString(), tasks: this.tasks }, null, 2);
+            const payload = this.computePayloadString();
             await writable.write(new Blob([payload], { type: 'application/json' }));
             await writable.close();
             this.fileHandle = handle;
+            try {
+                const file = await this.fileHandle.getFile();
+                this.lastFileModifiedMs = file.lastModified || Date.now();
+            } catch (_) {
+                this.lastFileModifiedMs = Date.now();
+            }
             this.updateFileStatus('Saved');
+            // Update reopen flag
+            try {
+                if (this.reopenOnStartup && handle && handle.kind === 'file') {
+                    await this.setStoredHandle(handle);
+                    localStorage.setItem('fancyTasks_lastFileName', handle.name);
+                }
+            } catch (_) {}
         } catch (err) {
             if (err && err.name === 'AbortError') return;
             console.error('Save failed:', err);
@@ -1077,8 +1531,82 @@ class TodoApp {
             const name = this.fileHandle.name || 'Opened file';
             el.textContent = `${name}${extra ? ' • ' + extra : ''}${this.autoSave ? ' • Auto-save' : ''}`;
         } else {
-            el.textContent = 'No file open';
+            el.textContent = `No file open${extra ? ' • ' + extra : ''}`;
         }
+    }
+
+    async tryReopenLastFile() {
+        try {
+            if (!this.reopenOnStartup) return;
+            if (!this.isFileSystemSupported) return;
+            const handle = await this.getStoredHandle();
+            if (!handle) {
+                const lastName = localStorage.getItem('fancyTasks_lastFileName') || '';
+                this.updateFileStatus(`Ready to reopen${lastName ? ' • ' + lastName : ''}`);
+                return;
+            }
+            this.fileHandle = handle;
+            await this.verifyPermission(this.fileHandle, true);
+            const file = await this.fileHandle.getFile();
+            const text = await file.text();
+            const data = JSON.parse(text);
+            const tasks = Array.isArray(data) ? data : data.tasks;
+            if (Array.isArray(tasks)) {
+                this.tasks = tasks;
+                this.lastFileModifiedMs = file.lastModified || Date.now();
+                try { localStorage.setItem('fancyTasks', JSON.stringify(this.tasks)); } catch (_) {}
+                this.render();
+                this.updateCounts();
+                this.updateFileStatus('Reopened');
+            }
+        } catch (_) {}
+    }
+
+    // Minimal IndexedDB helpers for storing FileSystemFileHandle (Chromium only)
+    openDb() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open('fancyTasksDB', 1);
+            req.onupgradeneeded = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async setStoredHandle(handle) {
+        const db = await this.openDb();
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction('kv', 'readwrite');
+            tx.objectStore('kv').put(handle, 'fileHandle');
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+        db.close();
+    }
+
+    async getStoredHandle() {
+        const db = await this.openDb();
+        const value = await new Promise((resolve, reject) => {
+            const tx = db.transaction('kv', 'readonly');
+            const req = tx.objectStore('kv').get('fileHandle');
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+        db.close();
+        return value || null;
+    }
+
+    async deleteStoredHandle() {
+        const db = await this.openDb();
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction('kv', 'readwrite');
+            tx.objectStore('kv').delete('fileHandle');
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+        db.close();
     }
 
     // Reset app
