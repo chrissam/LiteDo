@@ -2487,9 +2487,7 @@ body:not([data-theme="dark"]) .tags-container::after {
   border-radius: var(--radius-full);
 }
 
-.tags-list,
-#tagsModal .tags-list,
-.tags-modal-content .tags-list {
+.tags-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
@@ -2498,9 +2496,7 @@ body:not([data-theme="dark"]) .tags-container::after {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-12);
-  background: var(--color-background) !important;
-  /* Debug: Force light background for testing */
-  background-color: #f8f8f8 !important;
+  background: var(--color-background);
 }
 
 .tag-list-item {
@@ -2512,7 +2508,6 @@ body:not([data-theme="dark"]) .tags-container::after {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   transition: all var(--duration-fast);
-  color: var(--color-text);
 }
 
 .tag-list-item:hover {
@@ -2529,52 +2524,6 @@ body:not([data-theme="dark"]) .tags-container::after {
 .tag-list-item.selected .tag-list-name,
 .tag-list-item.selected .tag-list-count {
   color: var(--color-btn-primary-text);
-}
-
-/* Dark mode adjustments for tags modal */
-@media (prefers-color-scheme: dark) {
-  .tags-list {
-    background: var(--color-background-secondary) !important;
-  }
-  
-  .tag-list-item {
-    background: var(--color-background);
-  }
-  
-  .tag-list-item:hover {
-    background: var(--color-surface);
-  }
-}
-
-/* Light mode adjustments for tags modal */
-@media (prefers-color-scheme: light) {
-  .tags-list,
-  #tagsModal .tags-list,
-  .tags-modal-content .tags-list {
-    background: var(--color-background) !important;
-    background-color: #ffffff !important;
-  }
-  
-  .tag-list-item {
-    background: var(--color-surface);
-    border-color: var(--color-border);
-  }
-  
-  .tag-list-item:hover {
-    background: var(--color-background);
-    border-color: var(--color-primary);
-  }
-  
-  .tag-list-count {
-    background: var(--color-surface);
-    border-color: var(--color-border);
-  }
-}
-
-/* Force tags list background - highest specificity */
-#tagsModal .modal-body .tags-list-section .tags-list {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
 }
 
 .tag-list-checkbox {
@@ -2598,12 +2547,11 @@ body:not([data-theme="dark"]) .tags-container::after {
 .tag-list-count {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  background: var(--color-surface);
+  background: var(--color-background);
   padding: var(--space-2) var(--space-6);
   border-radius: var(--radius-full);
   min-width: 30px;
   text-align: center;
-  border: 1px solid var(--color-border);
 }
 
 .tag-list-actions {
@@ -2672,9 +2620,29 @@ body:not([data-theme="dark"]) .tags-container::after {
 
 /* Dark mode adjustments for tags modal */
 @media (prefers-color-scheme: dark) {
+  .tags-list {
+    background: var(--color-charcoal-800);
+    border-color: var(--color-charcoal-700);
+  }
+  
+  .tag-list-item {
+    background: var(--color-charcoal-700);
+    border-color: var(--color-charcoal-600);
+  }
+  
+  .tag-list-item:hover {
+    background: var(--color-charcoal-600);
+    border-color: var(--color-primary);
+  }
+  
   .tag-list-item.selected {
     background: var(--color-primary);
     border-color: var(--color-primary);
+  }
+  
+  .tag-list-count {
+    background: var(--color-charcoal-600);
+    color: var(--color-cream-50);
   }
   
   .tag-action-btn:hover {
