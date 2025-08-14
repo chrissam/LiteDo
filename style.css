@@ -997,8 +997,46 @@ select.form-control {
   left: 0;
   right: 0;
   height: 28px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, var(--color-light-gray) 100%);
+  /* Default light theme gradient */
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, #f8f9fa 100%);
   pointer-events: none;
+}
+
+/* Light theme adjustments for tags container */
+@media (prefers-color-scheme: light) {
+  .tags-container::after {
+    background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, #f8f9fa 100%) !important;
+  }
+}
+
+/* Force light theme for tags container - highest specificity */
+html[data-theme="light"] .tags-container::after,
+html[data-theme="light"] .sidebar .tags-container::after,
+.sidebar .tags-container::after {
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, #f8f9fa 100%) !important;
+}
+
+/* Ultra-specific light theme override */
+body:not([data-theme="dark"]) .sidebar .tags-container::after,
+body:not([data-theme="dark"]) .tags-container::after {
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, #f8f9fa 100%) !important;
+}
+
+/* Force light theme for sidebar tags container - only when not explicitly dark */
+.sidebar:not([data-theme="dark"]) .tags-container::after {
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, #f8f9fa 100%) !important;
+}
+
+/* Alternative approach - target the specific element */
+#tagsContainer::after {
+  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, #f8f9fa 100%) !important;
+}
+
+/* Dark theme adjustment for tags container gradient */
+@media (prefers-color-scheme: dark) {
+  .tags-container::after {
+    background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, #1f2121 100%) !important;
+  }
 }
 
 .tag-pill {
