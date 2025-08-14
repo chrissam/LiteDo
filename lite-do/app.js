@@ -19,6 +19,22 @@ class TodoApp {
         this.autoReloadMs = 5000;
         this._autoReloadTimer = null;
         
+        // Advanced filter properties
+        this.advancedFilters = {
+            fromDate: null,
+            toDate: null,
+            priority: '',
+            status: '',
+            tags: [],
+            createdDate: '',
+            dueDate: '',
+            customCreatedFrom: null,
+            customCreatedTo: null
+        };
+        this.filterPresets = [];
+        this.activePreset = null;
+        this._filterDebounceTimer = null;
+        
         this.init();
     }
 
@@ -103,34 +119,52 @@ class TodoApp {
 
     // Bind event listeners
     bindEvents() {
-        // Add task form
-        const addTaskForm = document.getElementById('addTaskForm');
-        if (addTaskForm) {
-            addTaskForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.addTask();
+        // Add task modal
+        const openAddTaskModalBtn = document.getElementById('openAddTaskModalBtn');
+        if (openAddTaskModalBtn) {
+            openAddTaskModalBtn.addEventListener('click', () => {
+                this.showAddTaskModal();
             });
         }
 
-        // Collapse composer
-        const toggleComposerBtn = document.getElementById('toggleComposerBtn');
-        if (toggleComposerBtn) {
-            toggleComposerBtn.addEventListener('click', () => {
-                const section = document.getElementById('addTaskSection');
-                const form = document.getElementById('addTaskForm');
-                const expanded = toggleComposerBtn.getAttribute('aria-expanded') === 'true';
-                if (expanded) {
-                    form.style.display = 'none';
-                    toggleComposerBtn.textContent = '+';
-                    toggleComposerBtn.setAttribute('aria-expanded', 'false');
-                    toggleComposerBtn.setAttribute('aria-label', 'Show composer');
-                } else {
-                    form.style.display = '';
-                    toggleComposerBtn.textContent = '−';
-                    toggleComposerBtn.setAttribute('aria-expanded', 'true');
-                    toggleComposerBtn.setAttribute('aria-label', 'Hide composer');
+        const closeAddTaskBtn = document.getElementById('closeAddTaskBtn');
+        if (closeAddTaskBtn) {
+            closeAddTaskBtn.addEventListener('click', () => {
+                this.hideModal('addTaskModal');
+                this.resetAddTaskForm();
+            });
+        }
+
+        const cancelAddTaskBtn = document.getElementById('cancelAddTaskBtn');
+        if (cancelAddTaskBtn) {
+            cancelAddTaskBtn.addEventListener('click', () => {
+                this.hideModal('addTaskModal');
+                this.resetAddTaskForm();
+            });
+        }
+
+        // Close add task modal on backdrop click
+        const addTaskModal = document.getElementById('addTaskModal');
+        if (addTaskModal) {
+            addTaskModal.addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal')) {
+                    this.hideModal('addTaskModal');
+                    this.resetAddTaskForm();
                 }
             });
+        }
+
+        // Add task form
+        const addTaskForm = document.getElementById('addTaskForm');
+        if (addTaskForm) {
+            console.log('Add task form found and event listener bound'); // Debug log
+            addTaskForm.addEventListener('submit', (e) => {
+                console.log('Form submit event triggered'); // Debug log
+                e.preventDefault();
+                this.addTask();
+            });
+        } else {
+            console.error('Add task form not found!'); // Debug log
         }
 
         // Search
@@ -196,11 +230,28 @@ class TodoApp {
             });
         }
 
-        // Tag search filter
-        const tagSearchInput = document.getElementById('tagSearchInput');
-        if (tagSearchInput) {
-            tagSearchInput.addEventListener('input', () => {
-                this.renderTags();
+        // Tags modal
+        const openTagsModalBtn = document.getElementById('openTagsModalBtn');
+        if (openTagsModalBtn) {
+            openTagsModalBtn.addEventListener('click', () => {
+                this.showTagsModal();
+            });
+        }
+
+        const closeTagsBtn = document.getElementById('closeTagsBtn');
+        if (closeTagsBtn) {
+            closeTagsBtn.addEventListener('click', () => {
+                this.hideModal('tagsModal');
+            });
+        }
+
+        // Close tags modal on backdrop click
+        const tagsModal = document.getElementById('tagsModal');
+        if (tagsModal) {
+            tagsModal.addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal')) {
+                    this.hideModal('tagsModal');
+                }
             });
         }
 
@@ -288,7 +339,25 @@ class TodoApp {
             });
         }
 
-        // Export and Reset
+        // File Management Dropdown
+        const fileDropdownToggle = document.getElementById('fileDropdownToggle');
+        const fileDropdownMenu = document.getElementById('fileDropdownMenu');
+        if (fileDropdownToggle && fileDropdownMenu) {
+            fileDropdownToggle.addEventListener('click', () => {
+                fileDropdownMenu.classList.toggle('show');
+                fileDropdownToggle.classList.toggle('active');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!fileDropdownToggle.contains(e.target) && !fileDropdownMenu.contains(e.target)) {
+                    fileDropdownMenu.classList.remove('show');
+                    fileDropdownToggle.classList.remove('active');
+                }
+            });
+        }
+
+        // File Management Actions
         const exportBtn = document.getElementById('exportBtn');
         if (exportBtn) {
             exportBtn.addEventListener('click', () => {
@@ -418,6 +487,9 @@ class TodoApp {
             });
         }
 
+        // Advanced Filters
+        this.bindAdvancedFilterEvents();
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             const isInput = ['INPUT', 'TEXTAREA'].includes((e.target && e.target.tagName) || '');
@@ -432,8 +504,18 @@ class TodoApp {
             }
             // New task focus
             if ((e.key === 'n' || e.key === 'N') && !isInput) {
-                const title = document.getElementById('taskTitle');
-                if (title) { e.preventDefault(); title.focus(); }
+                e.preventDefault(); 
+                this.showAddTaskModal();
+            }
+            // Open filters modal
+            if ((e.key === 'f' || e.key === 'F') && !isInput) {
+                e.preventDefault(); 
+                this.showModal('filtersModal');
+                // Focus on first filter input after modal opens
+                setTimeout(() => {
+                    const filterFromDate = document.getElementById('filterFromDate');
+                    if (filterFromDate) filterFromDate.focus();
+                }, 100);
             }
             // Submit add task with Cmd/Ctrl+Enter
             if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -556,6 +638,8 @@ class TodoApp {
 
     // Add new task
     addTask() {
+        console.log('addTask method called'); // Debug log
+        
         const titleInput = document.getElementById('taskTitle');
         const descriptionInput = document.getElementById('taskDescription');
         const dueDateInput = document.getElementById('taskDueDate');
@@ -582,6 +666,8 @@ class TodoApp {
             alert('Please enter a task title');
             return;
         }
+        
+        console.log('Form validation passed, creating task...'); // Debug log
 
         const newTask = {
             id: this.generateId(),
@@ -598,10 +684,28 @@ class TodoApp {
         };
 
         this.tasks.unshift(newTask);
+        console.log('Task added to array, total tasks:', this.tasks.length); // Debug log
+        
         this.saveData();
-        this.clearForm();
+        console.log('Data saved'); // Debug log
+        
         this.render();
+        console.log('Rendered'); // Debug log
+        
         this.updateCounts();
+        console.log('Counts updated'); // Debug log
+        
+        // Close modal and reset form
+        console.log('Attempting to close modal...'); // Debug log
+        this.hideModal('addTaskModal');
+        console.log('Modal hidden'); // Debug log
+        
+        this.resetAddTaskForm();
+        console.log('Form reset'); // Debug log
+        
+        // Show success message
+        this.showTaskCreatedMessage();
+        console.log('Success message shown'); // Debug log
     }
 
     // Clear add task form
@@ -625,6 +729,60 @@ class TodoApp {
             container.style.display = 'block';
             this.addSubtaskInput();
         }
+    }
+
+    // Show add task modal
+    showAddTaskModal() {
+        this.showModal('addTaskModal');
+        // Focus on title input
+        setTimeout(() => {
+            const titleInput = document.getElementById('taskTitle');
+            if (titleInput) titleInput.focus();
+        }, 100);
+    }
+
+    // Reset add task form
+    resetAddTaskForm() {
+        const form = document.getElementById('addTaskForm');
+        const subtasksContainer = document.getElementById('subtasksContainer');
+        const subtasksCount = document.getElementById('subtasksCount');
+        
+        if (form) {
+            form.reset();
+        }
+        
+        if (subtasksContainer) {
+            subtasksContainer.style.display = 'none';
+            subtasksContainer.innerHTML = '';
+        }
+        
+        if (subtasksCount) {
+            subtasksCount.textContent = '0 subtasks';
+        }
+        
+        this.subtasks = [];
+    }
+
+    // Show task created success message
+    showTaskCreatedMessage() {
+        // Create a temporary success message
+        const message = document.createElement('div');
+        message.className = 'task-created-message';
+        message.innerHTML = `
+            <div class="message-content">
+                <span class="message-icon">✅</span>
+                <span class="message-text">Task created successfully!</span>
+            </div>
+        `;
+        
+        document.body.appendChild(message);
+        
+        // Remove message after 3 seconds
+        setTimeout(() => {
+            if (message.parentNode) {
+                message.parentNode.removeChild(message);
+            }
+        }, 3000);
     }
 
     // Add subtask input (newTask = false uses add form; true uses edit modal)
@@ -1023,6 +1181,9 @@ class TodoApp {
                 break;
         }
 
+        // Apply advanced filters
+        filtered = this.applyAdvancedFilters(filtered);
+
         // Sort tasks
         filtered.sort((a, b) => {
             switch (this.currentSort) {
@@ -1041,6 +1202,156 @@ class TodoApp {
         });
 
         return filtered;
+    }
+
+    // Apply advanced filters to tasks
+    applyAdvancedFilters(tasks) {
+        let filtered = [...tasks];
+
+        // Date range filter
+        if (this.advancedFilters.fromDate) {
+            filtered = filtered.filter(task => {
+                const taskDate = task.dueDate || task.createdDate;
+                return taskDate && taskDate >= this.advancedFilters.fromDate;
+            });
+        }
+
+        if (this.advancedFilters.toDate) {
+            filtered = filtered.filter(task => {
+                const taskDate = task.dueDate || task.createdDate;
+                return taskDate && taskDate <= this.advancedFilters.toDate;
+            });
+        }
+
+        // Priority filter
+        if (this.advancedFilters.priority) {
+            filtered = filtered.filter(task => task.priority === this.advancedFilters.priority);
+        }
+
+        // Status filter
+        if (this.advancedFilters.status) {
+            const today = this.getCurrentDate();
+            switch (this.advancedFilters.status) {
+                case 'active':
+                    filtered = filtered.filter(task => !task.completed);
+                    break;
+                case 'completed':
+                    filtered = filtered.filter(task => task.completed);
+                    break;
+                case 'overdue':
+                    filtered = filtered.filter(task => task.dueDate && task.dueDate < today && !task.completed);
+                    break;
+            }
+        }
+
+        // Tags filter
+        if (this.advancedFilters.tags.length > 0) {
+            filtered = filtered.filter(task => 
+                this.advancedFilters.tags.every(tag => task.tags.includes(tag))
+            );
+        }
+
+        // Created date filter
+        if (this.advancedFilters.createdDate) {
+            const today = this.getCurrentDate();
+            const yesterday = this.getDateOffset(-1);
+            const weekStart = this.getWeekStart();
+            const monthStart = this.getMonthStart();
+
+            switch (this.advancedFilters.createdDate) {
+                case 'today':
+                    filtered = filtered.filter(task => task.createdDate === today);
+                    break;
+                case 'yesterday':
+                    filtered = filtered.filter(task => task.createdDate === yesterday);
+                    break;
+                case 'week':
+                    filtered = filtered.filter(task => task.createdDate >= weekStart);
+                    break;
+                case 'month':
+                    filtered = filtered.filter(task => task.createdDate >= monthStart);
+                    break;
+                case 'custom':
+                    if (this.advancedFilters.customCreatedFrom) {
+                        filtered = filtered.filter(task => 
+                            task.createdDate >= this.advancedFilters.customCreatedFrom
+                        );
+                    }
+                    if (this.advancedFilters.customCreatedTo) {
+                        filtered = filtered.filter(task => 
+                            task.createdDate <= this.advancedFilters.customCreatedTo
+                        );
+                    }
+                    break;
+            }
+        }
+
+        // Due date filter
+        if (this.advancedFilters.dueDate) {
+            const today = this.getCurrentDate();
+            const tomorrow = this.getDateOffset(1);
+            const weekEnd = this.getWeekEnd();
+
+            switch (this.advancedFilters.dueDate) {
+                case 'today':
+                    filtered = filtered.filter(task => task.dueDate === today);
+                    break;
+                case 'tomorrow':
+                    filtered = filtered.filter(task => task.dueDate === tomorrow);
+                    break;
+                case 'week':
+                    filtered = filtered.filter(task => task.dueDate && task.dueDate <= weekEnd);
+                    break;
+                case 'overdue':
+                    filtered = filtered.filter(task => task.dueDate && task.dueDate < today && !task.completed);
+                    break;
+                case 'no-due-date':
+                    filtered = filtered.filter(task => !task.dueDate);
+                    break;
+            }
+        }
+
+        return filtered;
+    }
+
+    // Get date offset from today
+    getDateOffset(days) {
+        const date = new Date();
+        date.setDate(date.getDate() + days);
+        return this.formatDateForFilter(date);
+    }
+
+    // Get week start (Monday)
+    getWeekStart() {
+        const date = new Date();
+        const day = date.getDay();
+        const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+        date.setDate(diff);
+        return this.formatDateForFilter(date);
+    }
+
+    // Get week end (Sunday)
+    getWeekEnd() {
+        const date = new Date();
+        const day = date.getDay();
+        const diff = date.getDate() - day + (day === 0 ? 0 : 7);
+        date.setDate(diff);
+        return this.formatDateForFilter(date);
+    }
+
+    // Get month start
+    getMonthStart() {
+        const date = new Date();
+        date.setDate(1);
+        return this.formatDateForFilter(date);
+    }
+
+    // Format date for filter (YYYY-MM-DD)
+    formatDateForFilter(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
 
     // Get all unique tags
@@ -1214,9 +1525,16 @@ class TodoApp {
         const completed = this.tasks.filter(t => t.completed).length;
         const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
         
+        const filteredTasks = this.getFilteredTasks();
+        const filteredCount = filteredTasks.length;
+        
         const taskStats = document.getElementById('taskStats');
         if (taskStats) {
-            taskStats.textContent = `${total} tasks, ${percentage}% complete`;
+            if (filteredCount === total) {
+                taskStats.textContent = `${total} tasks, ${percentage}% complete`;
+            } else {
+                taskStats.textContent = `${filteredCount} of ${total} tasks, ${percentage}% complete`;
+            }
         }
     }
 
@@ -1237,19 +1555,15 @@ class TodoApp {
         };
         const completed7d = this.tasks.filter(t => t.completed && t.completedDate && t.completedDate >= daysAgo(7)).length;
         const completed30d = this.tasks.filter(t => t.completed && t.completedDate && t.completedDate >= daysAgo(30)).length;
-        const tagCounts = this.tasks.flatMap(t => t.tags).reduce((acc, tag) => {
-            acc[tag] = (acc[tag] || 0) + 1; return acc;
-        }, {});
-        const topTags = Object.entries(tagCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
 
+        // Update basic stats
         const elements = {
             completionRate: document.getElementById('completionRate'),
             overdueTasksCount: document.getElementById('overdueTasksCount'),
             todayTasksCount: document.getElementById('todayTasksCount'),
             totalTasksCount: document.getElementById('totalTasksCount'),
             completed7d: document.getElementById('completed7d'),
-            completed30d: document.getElementById('completed30d'),
-            topTags: document.getElementById('topTags')
+            completed30d: document.getElementById('completed30d')
         };
 
         if (elements.completionRate) elements.completionRate.textContent = `${completionRate}%`;
@@ -1258,11 +1572,467 @@ class TodoApp {
         if (elements.totalTasksCount) elements.totalTasksCount.textContent = total;
         if (elements.completed7d) elements.completed7d.textContent = completed7d;
         if (elements.completed30d) elements.completed30d.textContent = completed30d;
-        if (elements.topTags) {
-            elements.topTags.innerHTML = topTags.map(([tag, count]) => `<span class="task-tag">${this.escapeHtml(tag)} (${count})</span>`).join('');
-        }
+
+        // Update enhanced charts and analytics
+        this.updatePriorityChart();
+        this.updateTrendChart();
+        this.updateTagsChart();
+        this.updateProductivityMetrics();
 
         this.showModal('analyticsModal');
+    }
+
+    // Update priority distribution chart
+    updatePriorityChart() {
+        const priorityCounts = {
+            High: this.tasks.filter(t => t.priority === 'High').length,
+            Med: this.tasks.filter(t => t.priority === 'Med').length,
+            Low: this.tasks.filter(t => t.priority === 'Low').length
+        };
+
+        const maxCount = Math.max(...Object.values(priorityCounts));
+        const maxWidth = 100; // Maximum width percentage
+
+        // Update High priority
+        const priorityHighFill = document.getElementById('priorityHighFill');
+        const priorityHighValue = document.getElementById('priorityHighValue');
+        if (priorityHighFill && priorityHighValue) {
+            const width = maxCount > 0 ? (priorityCounts.High / maxCount) * maxWidth : 0;
+            priorityHighFill.style.width = `${width}%`;
+            priorityHighValue.textContent = priorityCounts.High;
+        }
+
+        // Update Medium priority
+        const priorityMedFill = document.getElementById('priorityMedFill');
+        const priorityMedValue = document.getElementById('priorityMedValue');
+        if (priorityMedFill && priorityMedValue) {
+            const width = maxCount > 0 ? (priorityCounts.Med / maxCount) * maxWidth : 0;
+            priorityMedFill.style.width = `${width}%`;
+            priorityMedValue.textContent = priorityCounts.Med;
+        }
+
+        // Update Low priority
+        const priorityLowFill = document.getElementById('priorityLowFill');
+        const priorityLowValue = document.getElementById('priorityLowValue');
+        if (priorityLowFill && priorityLowValue) {
+            const width = maxCount > 0 ? (priorityCounts.Low / maxCount) * maxWidth : 0;
+            priorityLowFill.style.width = `${width}%`;
+            priorityLowValue.textContent = priorityCounts.Low;
+        }
+    }
+
+    // Update completion trend chart
+    updateTrendChart() {
+        const trendChartBars = document.getElementById('trendChartBars');
+        const trendChartLabels = document.getElementById('trendChartLabels');
+        
+        if (!trendChartBars || !trendChartLabels) return;
+
+        const days = 30;
+        const trendData = [];
+        const labels = [];
+
+        for (let i = days - 1; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateStr = this.formatDateForFilter(date);
+            
+            const completedCount = this.tasks.filter(t => 
+                t.completed && t.completedDate === dateStr
+            ).length;
+            
+            trendData.push(completedCount);
+            labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        }
+
+        const maxCompleted = Math.max(...trendData, 1);
+        const maxHeight = 140; // Maximum height in pixels
+
+        // Generate trend bars
+        trendChartBars.innerHTML = trendData.map(count => {
+            const height = (count / maxCompleted) * maxHeight;
+            return `<div class="trend-bar" style="height: ${height}px;" title="${count} tasks completed"></div>`;
+        }).join('');
+
+        // Generate labels
+        trendChartLabels.innerHTML = labels.map((label, index) => {
+            if (index % 7 === 0) { // Show label every 7 days
+                return `<span>${label}</span>`;
+            }
+            return '<span></span>';
+        }).join('');
+    }
+
+    // Update tags usage chart
+    updateTagsChart() {
+        const tagsChartItems = document.getElementById('tagsChartItems');
+        if (!tagsChartItems) return;
+
+        const tagCounts = this.tasks.flatMap(t => t.tags).reduce((acc, tag) => {
+            acc[tag] = (acc[tag] || 0) + 1;
+            return acc;
+        }, {});
+
+        const topTags = Object.entries(tagCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8);
+
+        if (topTags.length === 0) {
+            tagsChartItems.innerHTML = '<p style="color: var(--color-text-secondary); text-align: center;">No tags used yet</p>';
+            return;
+        }
+
+        const maxCount = Math.max(...topTags.map(([_, count]) => count));
+        const maxWidth = 100; // Maximum width percentage
+
+        tagsChartItems.innerHTML = topTags.map(([tag, count]) => {
+            const width = maxCount > 0 ? (count / maxCount) * maxWidth : 0;
+            return `
+                <div class="tag-chart-item">
+                    <div class="tag-chart-name">${this.escapeHtml(tag)}</div>
+                    <div class="tag-chart-bar">
+                        <div class="tag-chart-fill" style="width: ${width}%"></div>
+                    </div>
+                    <div class="tag-chart-count">${count}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Update productivity metrics
+    updateProductivityMetrics() {
+        // Average tasks per day
+        const avgTasksPerDay = document.getElementById('avgTasksPerDay');
+        if (avgTasksPerDay) {
+            const totalDays = this.getDaysSinceFirstTask();
+            const avg = totalDays > 0 ? (this.tasks.length / totalDays).toFixed(1) : '0';
+            avgTasksPerDay.textContent = avg;
+        }
+
+        // Completion streak
+        const completionStreak = document.getElementById('completionStreak');
+        if (completionStreak) {
+            const streak = this.getCompletionStreak();
+            completionStreak.textContent = `${streak} days`;
+        }
+
+        // Busiest day
+        const busiestDay = document.getElementById('busiestDay');
+        if (busiestDay) {
+            const busiest = this.getBusiestDay();
+            busiestDay.textContent = busiest;
+        }
+
+        // Most productive time
+        const mostProductiveTime = document.getElementById('mostProductiveTime');
+        if (mostProductiveTime) {
+            const time = this.getMostProductiveTime();
+            mostProductiveTime.textContent = time;
+        }
+    }
+
+    // Helper methods for productivity metrics
+    getDaysSinceFirstTask() {
+        if (this.tasks.length === 0) return 0;
+        
+        const firstTask = this.tasks.reduce((earliest, task) => {
+            return task.createdDate < earliest.createdDate ? task : earliest;
+        });
+        
+        const firstDate = new Date(firstTask.createdDate);
+        const today = new Date();
+        const diffTime = Math.abs(today - firstDate);
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
+
+    getCompletionStreak() {
+        let streak = 0;
+        const today = new Date();
+        
+        for (let i = 0; i < 365; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateStr = this.formatDateForFilter(date);
+            
+            const completedCount = this.tasks.filter(t => 
+                t.completed && t.completedDate === dateStr
+            ).length;
+            
+            if (completedCount > 0) {
+                streak++;
+            } else {
+                break;
+            }
+        }
+        
+        return streak;
+    }
+
+    getBusiestDay() {
+        const dayCounts = {};
+        
+        this.tasks.forEach(task => {
+            if (task.createdDate) {
+                const date = new Date(task.createdDate);
+                const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+                dayCounts[dayName] = (dayCounts[dayName] || 0) + 1;
+            }
+        });
+        
+        if (Object.keys(dayCounts).length === 0) return 'None';
+        
+        const busiestDay = Object.entries(dayCounts).reduce((a, b) => 
+            dayCounts[a[0]] > dayCounts[b[0]] ? a : b
+        );
+        
+        return busiestDay[0];
+    }
+
+    getMostProductiveTime() {
+        // This is a placeholder - you could implement time-based analysis
+        // For now, return a default value
+        return 'N/A';
+    }
+
+    // Show tags management modal
+    showTagsModal() {
+        this.renderTagsModal();
+        this.showModal('tagsModal');
+        
+        // Bind tags modal events
+        this.bindTagsModalEvents();
+    }
+
+    // Render tags modal content
+    renderTagsModal() {
+        const tagsModalList = document.getElementById('tagsModalList');
+        const tagsCount = document.getElementById('tagsCount');
+        
+        if (!tagsModalList || !tagsCount) return;
+
+        const allTags = this.getAllTags();
+        const tagCounts = this.getTagCounts();
+        
+        tagsCount.textContent = `${allTags.length} tags`;
+
+        if (allTags.length === 0) {
+            tagsModalList.innerHTML = '<p style="color: var(--color-text-secondary); text-align: center; padding: var(--space-20);">No tags created yet</p>';
+            return;
+        }
+
+        tagsModalList.innerHTML = allTags.map(tag => {
+            const count = tagCounts[tag] || 0;
+            const isUsed = count > 0;
+            return `
+                <div class="tag-list-item" data-tag="${this.escapeHtml(tag)}">
+                    <input type="checkbox" class="tag-list-checkbox" id="tag-${this.escapeHtml(tag)}">
+                    <div class="tag-list-color" style="background-color: var(--color-primary);"></div>
+                    <div class="tag-list-name">${this.escapeHtml(tag)}</div>
+                    <div class="tag-list-count">${count}</div>
+                    <div class="tag-list-actions">
+                        <button class="tag-action-btn edit" title="Edit tag" onclick="window.app.editTag('${this.escapeHtml(tag)}')">✎</button>
+                        <button class="tag-action-btn delete" title="Delete tag" onclick="window.app.deleteTag('${this.escapeHtml(tag)}')">🗑</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Get tag counts
+    getTagCounts() {
+        const counts = {};
+        this.tasks.forEach(task => {
+            task.tags.forEach(tag => {
+                counts[tag] = (counts[tag] || 0) + 1;
+            });
+        });
+        return counts;
+    }
+
+    // Bind tags modal events
+    bindTagsModalEvents() {
+        // Tag search
+        const tagsModalSearchInput = document.getElementById('tagsModalSearchInput');
+        if (tagsModalSearchInput) {
+            tagsModalSearchInput.addEventListener('input', (e) => {
+                this.filterTagsInModal(e.target.value);
+            });
+        }
+
+        // Filter options
+        const showUnusedTags = document.getElementById('showUnusedTags');
+        const showUsedTags = document.getElementById('showUsedTags');
+        
+        if (showUnusedTags) {
+            showUnusedTags.addEventListener('change', () => {
+                this.applyTagFilters();
+            });
+        }
+        
+        if (showUsedTags) {
+            showUsedTags.addEventListener('change', () => {
+                this.applyTagFilters();
+            });
+        }
+
+        // Add new tag
+        const addNewTagBtn = document.getElementById('addNewTagBtn');
+        if (addNewTagBtn) {
+            addNewTagBtn.addEventListener('click', () => {
+                this.showAddTagForm();
+            });
+        }
+
+        // Save tag
+        const saveTagBtn = document.getElementById('saveTagBtn');
+        if (saveTagBtn) {
+            saveTagBtn.addEventListener('click', () => {
+                this.saveNewTag();
+            });
+        }
+
+        // Cancel tag
+        const cancelTagBtn = document.getElementById('cancelTagBtn');
+        if (cancelTagBtn) {
+            cancelTagBtn.addEventListener('click', () => {
+                this.hideAddTagForm();
+            });
+        }
+
+        // Bulk delete
+        const bulkDeleteTagsBtn = document.getElementById('bulkDeleteTagsBtn');
+        if (bulkDeleteTagsBtn) {
+            bulkDeleteTagsBtn.addEventListener('click', () => {
+                this.bulkDeleteTags();
+            });
+        }
+    }
+
+    // Filter tags in modal
+    filterTagsInModal(searchTerm) {
+        const tagItems = document.querySelectorAll('.tag-list-item');
+        const searchLower = searchTerm.toLowerCase();
+
+        tagItems.forEach(item => {
+            const tagName = item.querySelector('.tag-list-name').textContent.toLowerCase();
+            if (tagName.includes(searchLower)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    // Apply tag filters
+    applyTagFilters() {
+        const showUnused = document.getElementById('showUnusedTags')?.checked;
+        const showUsed = document.getElementById('showUsedTags')?.checked;
+        const tagItems = document.querySelectorAll('.tag-list-item');
+
+        tagItems.forEach(item => {
+            const count = parseInt(item.querySelector('.tag-list-count').textContent);
+            const isUsed = count > 0;
+
+            if ((isUsed && showUsed) || (!isUsed && showUnused)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    // Show add tag form
+    showAddTagForm() {
+        const addTagForm = document.getElementById('addTagForm');
+        if (addTagForm) {
+            addTagForm.style.display = 'block';
+        }
+    }
+
+    // Hide add tag form
+    hideAddTagForm() {
+        const addTagForm = document.getElementById('addTagForm');
+        if (addTagForm) {
+            addTagForm.style.display = 'none';
+            
+            // Clear form
+            const newTagName = document.getElementById('newTagName');
+            if (newTagName) newTagName.value = '';
+        }
+    }
+
+    // Save new tag
+    saveNewTag() {
+        const newTagName = document.getElementById('newTagName');
+        if (!newTagName || !newTagName.value.trim()) return;
+
+        const tagName = newTagName.value.trim();
+        
+        // Check if tag already exists
+        if (this.getAllTags().includes(tagName)) {
+            alert('Tag already exists!');
+            return;
+        }
+
+        // Add tag to all tasks (optional - you could make this configurable)
+        // For now, just create the tag without assigning it to tasks
+        
+        this.hideAddTagForm();
+        this.renderTagsModal();
+        this.renderTags(); // Update sidebar tags
+    }
+
+    // Edit tag
+    editTag(tagName) {
+        // This could open an edit form or allow inline editing
+        // For now, just show an alert
+        alert(`Edit functionality for tag "${tagName}" would go here.`);
+    }
+
+    // Delete tag
+    deleteTag(tagName) {
+        if (!confirm(`Are you sure you want to delete the tag "${tagName}"? This will remove it from all tasks.`)) {
+            return;
+        }
+
+        // Remove tag from all tasks
+        this.tasks.forEach(task => {
+            task.tags = task.tags.filter(tag => tag !== tagName);
+        });
+
+        // Save and update
+        this.saveData();
+        this.render();
+        this.renderTags();
+        this.renderTagsModal();
+    }
+
+    // Bulk delete selected tags
+    bulkDeleteTags() {
+        const selectedTags = Array.from(document.querySelectorAll('.tag-list-checkbox:checked'))
+            .map(checkbox => checkbox.closest('.tag-list-item').dataset.tag);
+
+        if (selectedTags.length === 0) {
+            alert('Please select tags to delete.');
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to delete ${selectedTags.length} tags? This will remove them from all tasks.`)) {
+            return;
+        }
+
+        // Remove selected tags from all tasks
+        selectedTags.forEach(tagName => {
+            this.tasks.forEach(task => {
+                task.tags = task.tags.filter(tag => tag !== tagName);
+            });
+        });
+
+        // Save and update
+        this.saveData();
+        this.render();
+        this.renderTags();
+        this.renderTagsModal();
     }
 
     // Export tasks
@@ -1643,6 +2413,467 @@ class TodoApp {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // Bind advanced filter events
+    bindAdvancedFilterEvents() {
+        // Open filters modal
+        const openFiltersBtn = document.getElementById('openFiltersBtn');
+        if (openFiltersBtn) {
+            openFiltersBtn.addEventListener('click', () => {
+                this.showModal('filtersModal');
+            });
+        }
+
+        // Close filters modal
+        const closeFiltersBtn = document.getElementById('closeFiltersBtn');
+        if (closeFiltersBtn) {
+            closeFiltersBtn.addEventListener('click', () => {
+                this.hideModal('filtersModal');
+            });
+        }
+
+        // Close modal on backdrop click
+        const filtersModal = document.getElementById('filtersModal');
+        if (filtersModal) {
+            filtersModal.addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal')) {
+                    this.hideModal('filtersModal');
+                }
+            });
+        }
+
+        // Date range filters
+        const filterFromDate = document.getElementById('filterFromDate');
+        const filterToDate = document.getElementById('filterToDate');
+        if (filterFromDate) {
+            filterFromDate.addEventListener('change', (e) => {
+                this.advancedFilters.fromDate = e.target.value || null;
+                this.debouncedApplyFilters();
+            });
+        }
+        if (filterToDate) {
+            filterToDate.addEventListener('change', (e) => {
+                this.advancedFilters.toDate = e.target.value || null;
+                this.debouncedApplyFilters();
+            });
+        }
+
+        // Priority filter
+        const filterPriority = document.getElementById('filterPriority');
+        if (filterPriority) {
+            filterPriority.addEventListener('change', (e) => {
+                this.advancedFilters.priority = e.target.value;
+                this.debouncedApplyFilters();
+            });
+        }
+
+        // Status filter
+        const filterStatus = document.getElementById('filterStatus');
+        if (filterStatus) {
+            filterStatus.addEventListener('change', (e) => {
+                this.advancedFilters.status = e.target.value;
+                this.debouncedApplyFilters();
+            });
+        }
+
+        // Tags filter
+        const filterTags = document.getElementById('filterTags');
+        if (filterTags) {
+            filterTags.addEventListener('input', (e) => {
+                const tags = e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+                this.advancedFilters.tags = tags;
+                this.showTagSuggestions(e.target.value);
+                this.debouncedApplyFilters();
+            });
+        }
+
+        // Created date filter
+        const filterCreatedDate = document.getElementById('filterCreatedDate');
+        if (filterCreatedDate) {
+            filterCreatedDate.addEventListener('change', (e) => {
+                this.advancedFilters.createdDate = e.target.value;
+                this.handleCreatedDateFilterChange(e.target.value);
+                this.debouncedApplyFilters();
+            });
+        }
+
+        // Due date filter
+        const filterDueDate = document.getElementById('filterDueDate');
+        if (filterDueDate) {
+            filterDueDate.addEventListener('change', (e) => {
+                this.advancedFilters.dueDate = e.target.value;
+                this.debouncedApplyFilters();
+            });
+        }
+
+        // Filter action buttons
+        const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+        if (applyFiltersBtn) {
+            applyFiltersBtn.addEventListener('click', () => {
+                this.applyFilters();
+            });
+        }
+
+        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', () => {
+                this.clearAllFilters();
+            });
+        }
+
+        const saveFiltersBtn = document.getElementById('saveFiltersBtn');
+        if (saveFiltersBtn) {
+            saveFiltersBtn.addEventListener('click', () => {
+                this.saveFilterPreset();
+            });
+        }
+
+        // Load saved presets
+        this.loadFilterPresets();
+        this.renderFilterPresets();
+        
+        // Initialize filter form with defaults
+        this.initializeFilterForm();
+    }
+
+    // Show tag suggestions
+    showTagSuggestions(inputValue) {
+        const suggestionsContainer = document.getElementById('tagSuggestions');
+        if (!suggestionsContainer) return;
+
+        const input = inputValue.toLowerCase();
+        if (!input) {
+            suggestionsContainer.classList.remove('show');
+            return;
+        }
+
+        const allTags = this.getAllTags();
+        const matchingTags = allTags.filter(tag => 
+            tag.toLowerCase().includes(input) && 
+            !this.advancedFilters.tags.includes(tag)
+        );
+
+        if (matchingTags.length === 0) {
+            suggestionsContainer.classList.remove('show');
+            return;
+        }
+
+        suggestionsContainer.innerHTML = matchingTags.map(tag => 
+            `<div class="tag-suggestion-item" onclick="window.app.selectTagSuggestion('${tag}')">${this.escapeHtml(tag)}</div>`
+        ).join('');
+        suggestionsContainer.classList.add('show');
+    }
+
+    // Select tag suggestion
+    selectTagSuggestion(tag) {
+        const filterTags = document.getElementById('filterTags');
+        const suggestionsContainer = document.getElementById('tagSuggestions');
+        
+        if (filterTags) {
+            const currentTags = filterTags.value.split(',').map(t => t.trim()).filter(t => t);
+            if (!currentTags.includes(tag)) {
+                currentTags.push(tag);
+                filterTags.value = currentTags.join(', ');
+                this.advancedFilters.tags = currentTags;
+            }
+        }
+        
+        if (suggestionsContainer) {
+            suggestionsContainer.classList.remove('show');
+        }
+    }
+
+    // Handle created date filter change
+    handleCreatedDateFilterChange(value) {
+        if (value === 'custom') {
+            // Show custom date inputs (you can implement this if needed)
+            console.log('Custom date range selected');
+        }
+    }
+
+    // Apply all filters
+    applyFilters() {
+        this.render();
+        this.updateCounts();
+        this.showFilterStatus();
+        this.showFilterSummary();
+    }
+
+    // Debounced version of applyFilters for better performance
+    debouncedApplyFilters() {
+        if (this._filterDebounceTimer) {
+            clearTimeout(this._filterDebounceTimer);
+        }
+        this._filterDebounceTimer = setTimeout(() => {
+            this.applyFilters();
+        }, 300); // 300ms delay
+    }
+
+    // Clear all filters
+    clearAllFilters() {
+        this.advancedFilters = {
+            fromDate: null,
+            toDate: null,
+            priority: '',
+            status: '',
+            tags: [],
+            createdDate: '',
+            dueDate: '',
+            customCreatedFrom: null,
+            customCreatedTo: null
+        };
+
+        // Reset form inputs
+        const filterFromDate = document.getElementById('filterFromDate');
+        const filterToDate = document.getElementById('filterToDate');
+        const filterPriority = document.getElementById('filterPriority');
+        const filterStatus = document.getElementById('filterStatus');
+        const filterTags = document.getElementById('filterTags');
+        const filterCreatedDate = document.getElementById('filterCreatedDate');
+        const filterDueDate = document.getElementById('filterDueDate');
+
+        if (filterFromDate) filterFromDate.value = '';
+        if (filterToDate) filterToDate.value = '';
+        if (filterPriority) filterPriority.value = '';
+        if (filterStatus) filterStatus.value = '';
+        if (filterTags) filterTags.value = '';
+        if (filterCreatedDate) filterCreatedDate.value = '';
+        if (filterDueDate) filterDueDate.value = '';
+
+        this.render();
+        this.updateCounts();
+        this.hideFilterStatus();
+        this.hideFilterSummary();
+    }
+
+    // Show filter status
+    showFilterStatus() {
+        const openFiltersBtn = document.getElementById('openFiltersBtn');
+        const filterCountBadge = document.getElementById('filterCountBadge');
+        
+        if (!openFiltersBtn || !filterCountBadge) return;
+
+        const activeFilters = this.getActiveFiltersCount();
+        if (activeFilters > 0) {
+            filterCountBadge.textContent = activeFilters;
+            filterCountBadge.style.display = 'inline-block';
+            openFiltersBtn.classList.add('has-active-filters');
+        } else {
+            filterCountBadge.style.display = 'none';
+            openFiltersBtn.classList.remove('has-active-filters');
+        }
+    }
+
+    // Hide filter status
+    hideFilterStatus() {
+        const filterCountBadge = document.getElementById('filterCountBadge');
+        const openFiltersBtn = document.getElementById('openFiltersBtn');
+        
+        if (filterCountBadge) {
+            filterCountBadge.style.display = 'none';
+        }
+        if (openFiltersBtn) {
+            openFiltersBtn.classList.remove('has-active-filters');
+        }
+    }
+
+    // Hide filter summary
+    hideFilterSummary() {
+        const summaryElement = document.querySelector('#filtersModal .filter-summary');
+        if (summaryElement) {
+            summaryElement.remove();
+        }
+    }
+
+    // Get count of active filters
+    getActiveFiltersCount() {
+        let count = 0;
+        if (this.advancedFilters.fromDate) count++;
+        if (this.advancedFilters.toDate) count++;
+        if (this.advancedFilters.priority) count++;
+        if (this.advancedFilters.status) count++;
+        if (this.advancedFilters.tags.length > 0) count++;
+        if (this.advancedFilters.createdDate) count++;
+        if (this.advancedFilters.dueDate) count++;
+        return count;
+    }
+
+    // Save filter preset
+    saveFilterPreset() {
+        const name = prompt('Enter a name for this filter preset:');
+        if (!name) return;
+
+        const preset = {
+            id: Date.now().toString(),
+            name: name,
+            filters: { ...this.advancedFilters }
+        };
+
+        this.filterPresets.push(preset);
+        this.saveFilterPresets();
+        this.renderFilterPresets();
+    }
+
+    // Load filter presets
+    loadFilterPresets() {
+        const stored = localStorage.getItem('fancyTasks_filterPresets');
+        if (stored) {
+            try {
+                this.filterPresets = JSON.parse(stored);
+            } catch (e) {
+                console.error('Error parsing filter presets:', e);
+                this.filterPresets = [];
+            }
+        }
+    }
+
+    // Save filter presets to localStorage
+    saveFilterPresets() {
+        try {
+            localStorage.setItem('fancyTasks_filterPresets', JSON.stringify(this.filterPresets));
+        } catch (e) {
+            console.error('Error saving filter presets:', e);
+        }
+    }
+
+    // Render filter presets
+    renderFilterPresets() {
+        const presetsList = document.getElementById('presetsList');
+        if (!presetsList) return;
+
+        if (this.filterPresets.length === 0) {
+            presetsList.innerHTML = '<p style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">No saved presets</p>';
+            return;
+        }
+
+        presetsList.innerHTML = this.filterPresets.map(preset => `
+            <div class="preset-tag ${this.activePreset === preset.id ? 'active' : ''}" 
+                 onclick="window.app.loadFilterPreset('${preset.id}')">
+                ${this.escapeHtml(preset.name)}
+                <button class="preset-remove" onclick="event.stopPropagation(); window.app.deleteFilterPreset('${preset.id}')">×</button>
+            </div>
+        `).join('');
+    }
+
+    // Load filter preset
+    loadFilterPreset(presetId) {
+        const preset = this.filterPresets.find(p => p.id === presetId);
+        if (!preset) return;
+
+        this.advancedFilters = { ...preset.filters };
+        this.activePreset = presetId;
+
+        // Update form inputs
+        this.updateFilterFormInputs();
+        this.render();
+        this.updateCounts();
+        this.renderFilterPresets();
+        this.showFilterStatus();
+        this.showFilterSummary();
+    }
+
+    // Delete filter preset
+    deleteFilterPreset(presetId) {
+        if (confirm('Are you sure you want to delete this filter preset?')) {
+            this.filterPresets = this.filterPresets.filter(p => p.id !== presetId);
+            if (this.activePreset === presetId) {
+                this.activePreset = null;
+            }
+            this.saveFilterPresets();
+            this.renderFilterPresets();
+        }
+    }
+
+    // Update filter form inputs
+    updateFilterFormInputs() {
+        const filterFromDate = document.getElementById('filterFromDate');
+        const filterToDate = document.getElementById('filterToDate');
+        const filterPriority = document.getElementById('filterPriority');
+        const filterStatus = document.getElementById('filterStatus');
+        const filterTags = document.getElementById('filterTags');
+        const filterCreatedDate = document.getElementById('filterCreatedDate');
+        const filterDueDate = document.getElementById('filterDueDate');
+
+        if (filterFromDate) filterFromDate.value = this.advancedFilters.fromDate || '';
+        if (filterToDate) filterToDate.value = this.advancedFilters.toDate || '';
+        if (filterPriority) filterPriority.value = this.advancedFilters.priority;
+        if (filterStatus) filterStatus.value = this.advancedFilters.status;
+        if (filterTags) filterTags.value = this.advancedFilters.tags.join(', ');
+        if (filterCreatedDate) filterCreatedDate.value = this.advancedFilters.createdDate;
+        if (filterDueDate) filterDueDate.value = this.advancedFilters.dueDate;
+    }
+
+    // Initialize filter form with sensible defaults
+    initializeFilterForm() {
+        // Set default date range to current month
+        const today = new Date();
+        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+        const filterFromDate = document.getElementById('filterFromDate');
+        const filterToDate = document.getElementById('filterToDate');
+        
+        if (filterFromDate) {
+            filterFromDate.value = this.formatDateForFilter(firstDayOfMonth);
+            this.advancedFilters.fromDate = this.formatDateForFilter(firstDayOfMonth);
+        }
+        if (filterToDate) {
+            filterToDate.value = this.formatDateForFilter(lastDayOfMonth);
+            this.advancedFilters.toDate = this.formatDateForFilter(lastDayOfMonth);
+        }
+    }
+
+    // Get filter summary for display
+    getFilterSummary() {
+        const summary = [];
+        
+        if (this.advancedFilters.fromDate && this.advancedFilters.toDate) {
+            summary.push(`Date: ${this.advancedFilters.fromDate} to ${this.advancedFilters.toDate}`);
+        }
+        
+        if (this.advancedFilters.priority) {
+            summary.push(`Priority: ${this.advancedFilters.priority}`);
+        }
+        
+        if (this.advancedFilters.status) {
+            summary.push(`Status: ${this.advancedFilters.status}`);
+        }
+        
+        if (this.advancedFilters.tags.length > 0) {
+            summary.push(`Tags: ${this.advancedFilters.tags.join(', ')}`);
+        }
+        
+        if (this.advancedFilters.createdDate) {
+            summary.push(`Created: ${this.advancedFilters.createdDate}`);
+        }
+        
+        if (this.advancedFilters.dueDate) {
+            summary.push(`Due: ${this.advancedFilters.dueDate}`);
+        }
+        
+        return summary;
+    }
+
+    // Show filter summary in the modal header
+    showFilterSummary() {
+        const modalHeader = document.querySelector('#filtersModal .modal-header');
+        if (!modalHeader) return;
+
+        let summaryElement = modalHeader.querySelector('.filter-summary');
+        if (!summaryElement) {
+            summaryElement = document.createElement('div');
+            summaryElement.className = 'filter-summary';
+            modalHeader.appendChild(summaryElement);
+        }
+
+        const summary = this.getFilterSummary();
+        if (summary.length > 0) {
+            summaryElement.innerHTML = `<small>${summary.join(' • ')}</small>`;
+            summaryElement.style.display = 'block';
+        } else {
+            summaryElement.style.display = 'none';
+        }
     }
 }
 

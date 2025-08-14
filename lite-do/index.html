@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteDo — Light, Fast, Yours</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Left Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-row">
+                    <img class="app-logo" src="assets/litedo-feather.png" alt="LiteDo feather quill and ink logo" />
+                    <div>
+                        <h1 class="app-title">LiteDo</h1>
+                        <p class="app-tagline">Lightweight. Fast. Yours.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Box -->
+            <div class="search-container">
+                <div class="search-input-wrapper" style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search (e.g., tag:work completed:true before:2025-01-01)">
+                    <span class="search-icon">🔍</span>
+                    <button class="btn btn--secondary btn--sm" id="searchHelpBtn" title="Search tips">?</button>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="navigation">
+                <button class="nav-item active" data-filter="all">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">All</span>
+                    <span class="task-count" id="allCount">0</span>
+                </button>
+                <button class="nav-item" data-filter="today">
+                    <span class="nav-icon">📅</span>
+                    <span class="nav-text">Today</span>
+                    <span class="task-count" id="todayCount">0</span>
+                </button>
+                <button class="nav-item" data-filter="upcoming">
+                    <span class="nav-icon">⏰</span>
+                    <span class="nav-text">Upcoming</span>
+                    <span class="task-count" id="upcomingCount">0</span>
+                </button>
+                <button class="nav-item" data-filter="overdue">
+                    <span class="nav-icon">⚠️</span>
+                    <span class="nav-text">Overdue</span>
+                    <span class="task-count" id="overdueCount">0</span>
+                </button>
+                <button class="nav-item" data-filter="completed">
+                    <span class="nav-icon">✅</span>
+                    <span class="nav-text">Completed</span>
+                    <span class="task-count" id="completedCount">0</span>
+                </button>
+            </nav>
+
+            <!-- Show Completed Checkbox -->
+            <div class="filter-option">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="showCompleted" checked>
+                    <span class="checkbox-custom"></span>
+                    Show completed
+                </label>
+                <label class="checkbox-label" style="margin-top:8px;">
+                    <input type="checkbox" id="showTagsPanel">
+                    <span class="checkbox-custom"></span>
+                    Show tags panel
+                </label>
+            </div>
+
+            <!-- Sort Dropdown -->
+            <div class="sort-container">
+                <label class="form-label">Sort by</label>
+                <select id="sortBy" class="form-control">
+                    <option value="createdDate">Created Date</option>
+                    <option value="priority">Priority</option>
+                    <option value="dueDate">Due Date</option>
+                </select>
+            </div>
+
+            <!-- Tags Section -->
+            <div class="tags-section" id="tagsSection">
+                <div class="tags-header">
+                    <h3 class="section-title">Tags</h3>
+                    <button type="button" id="openTagsModalBtn" class="btn btn--secondary btn--sm" title="Manage tags">
+                        ⚙️
+                    </button>
+                </div>
+                <div class="tags-container" id="tagsContainer">
+                    <!-- Tags will be dynamically populated -->
+                </div>
+            </div>
+
+            <!-- Bottom Actions -->
+            <div class="sidebar-footer">
+                <div id="fileStatus" class="selected-count" style="margin: 0 0 8px 0;">No file open</div>
+                
+                <!-- File Management Dropdown -->
+                <div class="dropdown-container">
+                    <button class="btn btn--outline btn--full-width dropdown-toggle" id="fileDropdownToggle">
+                        📁 File Management
+                        <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div class="dropdown-menu" id="fileDropdownMenu">
+                        <button class="dropdown-item" id="newFileBtn">📄 New file…</button>
+                        <button class="dropdown-item" id="openFileBtn">📂 Open file…</button>
+                        <button class="dropdown-item" id="saveFileBtn">💾 Save</button>
+                        <button class="dropdown-item" id="saveAsFileBtn">💾 Save as…</button>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item" id="importBtn">📥 Import JSON…</button>
+                        <button class="dropdown-item" id="exportBtn">📤 Export JSON</button>
+                        <button class="dropdown-item" id="exportMdBtn">📤 Export Markdown</button>
+                    </div>
+                </div>
+                <input type="file" id="importFileInput" accept="application/json" style="display:none;" />
+                
+                <!-- Settings Section -->
+                <div class="settings-section">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="autoSaveToggle">
+                        <span class="checkbox-custom"></span>
+                        Auto-save to file
+                    </label>
+                    <label class="checkbox-label" style="margin-top: 8px;">
+                        <input type="checkbox" id="autoReloadToggle">
+                        <span class="checkbox-custom"></span>
+                        Auto-reload from file
+                    </label>
+                    <label class="checkbox-label" style="margin-top: 8px;">
+                        <input type="checkbox" id="reopenOnStartupToggle">
+                        <span class="checkbox-custom"></span>
+                        Reopen last file on startup
+                    </label>
+                    <div class="form-group" style="margin-top: 8px;">
+                        <label class="form-label" for="autoReloadInterval">Auto-reload every (seconds)</label>
+                        <input type="number" id="autoReloadInterval" class="form-control" min="2" step="1" value="5" />
+                    </div>
+                    <div class="form-group" style="margin-top: 8px;">
+                        <label class="form-label" for="themeSelect">Theme</label>
+                        <select id="themeSelect" class="form-control">
+                            <option value="auto">Auto</option>
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </div>
+                    <button class="btn btn--outline btn--full-width" id="resetBtn">Reset</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="main-header">
+                <div class="header-left">
+                    <h1 class="page-title">Tasks</h1>
+                    <div class="stats">
+                        <span id="taskStats">0 tasks, 0% complete</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn--secondary" id="clearSearchBtn" style="display: none;">Clear search</button>
+                    <button class="btn btn--secondary" id="analyticsBtn">Show analytics</button>
+                </div>
+            </header>
+
+            <!-- Add Task Button -->
+            <div class="add-task-section">
+                <button type="button" id="openAddTaskModalBtn" class="btn btn--primary btn--full-width">
+                    ➕ Add New Task
+                </button>
+            </div>
+
+            <!-- Advanced Filters Button -->
+            <div class="filters-button-section">
+                <button type="button" id="openFiltersBtn" class="btn btn--secondary">
+                    🔍 Advanced Filters
+                    <span class="filter-count-badge" id="filterCountBadge" style="display: none;">0</span>
+                </button>
+            </div>
+
+            <!-- Bulk Actions -->
+            <div class="bulk-actions">
+                <div class="bulk-left">
+                    <button class="btn btn--outline btn--sm" id="markDoneBtn">Mark done</button>
+                    <button class="btn btn--outline btn--sm" id="deleteSelectedBtn">Delete</button>
+                    <span class="selected-count" id="selectedCount">Selected 0</span>
+                </div>
+                <div class="bulk-right">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="selectAllCheckbox">
+                        <span class="checkbox-custom"></span>
+                        Select all
+                    </label>
+                </div>
+            </div>
+
+            <!-- Task List -->
+            <div class="task-list" id="taskList">
+                <!-- Tasks will be dynamically populated -->
+            </div>
+
+            <!-- Analytics Modal -->
+            <div id="analyticsModal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Analytics</h2>
+                        <button class="modal-close" id="closeAnalyticsBtn">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Basic Stats Grid -->
+                        <div class="analytics-grid">
+                            <div class="analytics-card">
+                                <h3>Task Completion</h3>
+                                <div class="stat-number" id="completionRate">0%</div>
+                            </div>
+                            <div class="analytics-card">
+                                <h3>Overdue Tasks</h3>
+                                <div class="stat-number" id="overdueTasksCount">0</div>
+                            </div>
+                            <div class="analytics-card">
+                                <h3>Tasks Due Today</h3>
+                                <div class="stat-number" id="todayTasksCount">0</div>
+                            </div>
+                            <div class="analytics-card">
+                                <h3>Total Tasks</h3>
+                                <div class="stat-number" id="totalTasksCount">0</div>
+                            </div>
+                            <div class="analytics-card">
+                                <h3>Completed (7d)</h3>
+                                <div class="stat-number" id="completed7d">0</div>
+                            </div>
+                            <div class="analytics-card">
+                                <h3>Completed (30d)</h3>
+                                <div class="stat-number" id="completed30d">0</div>
+                            </div>
+                        </div>
+
+                        <!-- Charts and Graphs Section -->
+                        <div class="charts-section">
+                            <h3 class="section-title">Charts & Analytics</h3>
+                            
+                            <!-- Priority Distribution Chart -->
+                            <div class="chart-container">
+                                <h4>Priority Distribution</h4>
+                                <div class="priority-chart" id="priorityChart">
+                                    <div class="chart-bars">
+                                        <div class="chart-bar-container">
+                                            <div class="chart-bar-label">High</div>
+                                            <div class="chart-bar" id="priorityHighBar">
+                                                <div class="chart-bar-fill" id="priorityHighFill"></div>
+                                            </div>
+                                            <div class="chart-bar-value" id="priorityHighValue">0</div>
+                                        </div>
+                                        <div class="chart-bar-container">
+                                            <div class="chart-bar-label">Medium</div>
+                                            <div class="chart-bar" id="priorityMedBar">
+                                                <div class="chart-bar-fill" id="priorityMedFill"></div>
+                                            </div>
+                                            <div class="chart-bar-value" id="priorityMedValue">0</div>
+                                        </div>
+                                        <div class="chart-bar-container">
+                                            <div class="chart-bar-label">Low</div>
+                                            <div class="chart-bar" id="priorityLowBar">
+                                                <div class="chart-bar-fill" id="priorityLowFill"></div>
+                                            </div>
+                                            <div class="chart-bar-value" id="priorityLowValue">0</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Completion Trend Chart -->
+                            <div class="chart-container">
+                                <h4>Completion Trend (Last 30 Days)</h4>
+                                <div class="trend-chart" id="trendChart">
+                                    <div class="trend-chart-bars" id="trendChartBars">
+                                        <!-- Trend bars will be generated dynamically -->
+                                    </div>
+                                    <div class="trend-chart-labels" id="trendChartLabels">
+                                        <!-- Date labels will be generated dynamically -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tag Usage Chart -->
+                            <div class="chart-container">
+                                <h4>Most Used Tags</h4>
+                                <div class="tags-chart" id="tagsChart">
+                                    <div class="tags-chart-items" id="tagsChartItems">
+                                        <!-- Tag items will be generated dynamically -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Productivity Metrics -->
+                            <div class="metrics-grid">
+                                <div class="metric-card">
+                                    <h5>Average Tasks per Day</h5>
+                                    <div class="metric-value" id="avgTasksPerDay">0</div>
+                                </div>
+                                <div class="metric-card">
+                                    <h5>Completion Streak</h5>
+                                    <div class="metric-value" id="completionStreak">0 days</div>
+                                </div>
+                                <div class="metric-card">
+                                    <h5>Busiest Day</h5>
+                                    <div class="metric-value" id="busiestDay">None</div>
+                                </div>
+                                <div class="metric-card">
+                                    <h5>Most Productive Time</h5>
+                                    <div class="metric-value" id="mostProductiveTime">N/A</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Help Modal -->
+            <div id="searchHelpModal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Search help</h2>
+                        <button class="modal-close" id="closeSearchHelpBtn">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="card__body">
+                            <p>Use operators in the search box. Keys are case-insensitive.</p>
+                            <ul>
+                                <li><code>tag:work</code> — filter by tag</li>
+                                <li><code>priority:High</code></li>
+                                <li><code>completed:true</code> | <code>false</code></li>
+                                <li><code>is:today</code> | <code>upcoming</code> | <code>overdue</code> | <code>completed</code></li>
+                                <li><code>due:YYYY-MM-DD</code>, <code>before:YYYY-MM-DD</code>, <code>after:YYYY-MM-DD</code></li>
+                                <li><code>created:YYYY-MM-DD</code> | <code>today</code> | <code>yesterday</code></li>
+                                <li><code>createdBefore:YYYY-MM-DD</code>, <code>createdAfter:YYYY-MM-DD</code></li>
+                                <li><code>text:"exact phrase"</code> — match in title/description</li>
+                            </ul>
+                            <p>Free text terms also match title, description, and tags.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Task Modal -->
+            <div id="editTaskModal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Edit Task</h2>
+                        <button class="modal-close" id="closeEditBtn">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editTaskForm">
+                            <input type="hidden" id="editTaskId">
+                            <div class="form-group">
+                                <label class="form-label">Task Title</label>
+                                <input type="text" id="editTaskTitle" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Description</label>
+                                <textarea id="editTaskDescription" class="form-control" rows="3"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Due Date</label>
+                                <input type="date" id="editTaskDueDate" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Priority</label>
+                                <select id="editTaskPriority" class="form-control">
+                                    <option value="Low">Low Priority</option>
+                                    <option value="Med">Med Priority</option>
+                                    <option value="High">High Priority</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tags</label>
+                                <input type="text" id="editTaskTags" class="form-control" placeholder="Tags (comma separated)">
+                            </div>
+                             <div class="form-group">
+                                 <label class="form-label">Subtasks</label>
+                                 <div style="margin-bottom: 8px;">
+                                     <button type="button" id="editAddSubtaskBtn" class="btn btn--outline btn--sm">+ Add subtask</button>
+                                 </div>
+                                 <div id="editSubtasksContainer" class="subtasks-container" style="display: none;"></div>
+                             </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn--outline" id="cancelEditBtn">Cancel</button>
+                                <button type="submit" class="btn btn--primary">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Filters Modal -->
+            <div id="filtersModal" class="modal hidden">
+                <div class="modal-content filters-modal-content">
+                    <div class="modal-header">
+                        <h2>Advanced Filters</h2>
+                        <div class="filters-header-actions">
+                            <span class="filter-help" title="Press 'F' to focus filters">⌨️ F</span>
+                            <button class="modal-close" id="closeFiltersBtn">×</button>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="filters-content" id="filtersContent">
+                            <div class="filters-row">
+                                <!-- Date Range Filters -->
+                                <div class="filter-group">
+                                    <label class="form-label">Date Range</label>
+                                    <div class="date-range-inputs">
+                                        <input type="date" id="filterFromDate" class="form-control" placeholder="From">
+                                        <span class="date-separator">to</span>
+                                        <input type="date" id="filterToDate" class="form-control" placeholder="To">
+                                    </div>
+                                </div>
+                                
+                                <!-- Priority Filter -->
+                                <div class="filter-group">
+                                    <label class="form-label">Priority</label>
+                                    <select id="filterPriority" class="form-control">
+                                        <option value="">All Priorities</option>
+                                        <option value="High">High</option>
+                                        <option value="Med">Medium</option>
+                                        <option value="Low">Low</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Status Filter -->
+                                <div class="filter-group">
+                                    <label class="form-label">Status</label>
+                                    <select id="filterStatus" class="form-control">
+                                        <option value="">All Statuses</option>
+                                        <option value="active">Active</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="overdue">Overdue</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="filters-row">
+                                <!-- Tag Filter -->
+                                <div class="filter-group">
+                                    <label class="form-label">Tags</label>
+                                    <div class="tag-filter-container">
+                                        <input type="text" id="filterTags" class="form-control" placeholder="Filter by tags (comma separated)">
+                                        <div class="tag-suggestions" id="tagSuggestions"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Created Date Filter -->
+                                <div class="filter-group">
+                                    <label class="form-label">Created Date</label>
+                                    <select id="filterCreatedDate" class="form-control">
+                                        <option value="">Any Time</option>
+                                        <option value="today">Today</option>
+                                        <option value="yesterday">Yesterday</option>
+                                        <option value="week">This Week</option>
+                                        <option value="month">This Month</option>
+                                        <option value="custom">Custom Range</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Due Date Filter -->
+                                <div class="filter-group">
+                                    <label class="form-label">Due Date</label>
+                                    <select id="filterDueDate" class="form-control">
+                                        <option value="">Any Due Date</option>
+                                        <option value="today">Due Today</option>
+                                        <option value="tomorrow">Due Tomorrow</option>
+                                        <option value="week">Due This Week</option>
+                                        <option value="overdue">Overdue</option>
+                                        <option value="no-due-date">No Due Date</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="filters-actions">
+                                <button type="button" id="applyFiltersBtn" class="btn btn--primary">Apply Filters</button>
+                                <button type="button" id="clearFiltersBtn" class="btn btn--outline">Clear All</button>
+                                <button type="button" id="saveFiltersBtn" class="btn btn--secondary">Save Preset</button>
+                            </div>
+                            
+                            <!-- Saved Filter Presets -->
+                            <div class="filter-presets" id="filterPresets">
+                                <h4 class="presets-title">Saved Presets</h4>
+                                <div class="presets-list" id="presetsList">
+                                    <!-- Presets will be dynamically populated -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Task Modal -->
+            <div id="addTaskModal" class="modal hidden">
+                <div class="modal-content add-task-modal-content">
+                    <div class="modal-header">
+                        <h2>Create New Task</h2>
+                        <button class="modal-close" id="closeAddTaskBtn">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addTaskForm" class="add-task-form">
+                            <div class="form-group">
+                                <label class="form-label" for="taskTitle">Task Title *</label>
+                                <input type="text" id="taskTitle" class="form-control" placeholder="Enter task title..." required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="taskDescription">Description</label>
+                                <textarea id="taskDescription" class="form-control" placeholder="Add notes or description..." rows="3"></textarea>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="taskDueDate">Due Date</label>
+                                    <input type="date" id="taskDueDate" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="taskPriority">Priority</label>
+                                    <select id="taskPriority" class="form-control">
+                                        <option value="Low">Low Priority</option>
+                                        <option value="Med">Medium Priority</option>
+                                        <option value="High">High Priority</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="taskTags">Tags</label>
+                                <input type="text" id="taskTags" class="form-control" placeholder="Enter tags separated by commas">
+                                <small class="form-help">Example: work, urgent, project</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Subtasks</label>
+                                <div class="subtasks-header">
+                                    <button type="button" id="addSubtaskBtn" class="btn btn--outline btn--sm">
+                                        ➕ Add Subtask
+                                    </button>
+                                    <span class="subtasks-count" id="subtasksCount">0 subtasks</span>
+                                </div>
+                                <div id="subtasksContainer" class="subtasks-container" style="display: none;">
+                                    <!-- Subtasks will be added here dynamically -->
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="button" id="cancelAddTaskBtn" class="btn btn--outline">Cancel</button>
+                                <button type="submit" class="btn btn--primary">Create Task</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tags Management Modal -->
+            <div id="tagsModal" class="modal hidden">
+                <div class="modal-content tags-modal-content">
+                    <div class="modal-header">
+                        <h2>Tags Management</h2>
+                        <button class="modal-close" id="closeTagsBtn">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Tag Search and Filter -->
+                        <div class="tag-search-section">
+                            <div class="form-group">
+                                <label class="form-label">Search Tags</label>
+                                <input type="text" id="tagsModalSearchInput" class="form-control" placeholder="Search tags...">
+                            </div>
+                            <div class="tag-filter-options">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="showUnusedTags" checked>
+                                    <span class="checkbox-custom"></span>
+                                    Show unused tags
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="showUsedTags" checked>
+                                    <span class="checkbox-custom"></span>
+                                    Show used tags
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Tags List -->
+                        <div class="tags-list-section">
+                            <div class="tags-list-header">
+                                <h4>Available Tags</h4>
+                                <span class="tags-count" id="tagsCount">0 tags</span>
+                            </div>
+                            <div class="tags-list" id="tagsModalList">
+                                <!-- Tags will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Tag Actions -->
+                        <div class="tag-actions">
+                            <button type="button" id="addNewTagBtn" class="btn btn--primary">+ Add New Tag</button>
+                            <button type="button" id="bulkDeleteTagsBtn" class="btn btn--outline">Delete Selected</button>
+                        </div>
+
+                        <!-- Add New Tag Form -->
+                        <div class="add-tag-form" id="addTagForm" style="display: none;">
+                            <h4>Add New Tag</h4>
+                            <div class="form-group">
+                                <input type="text" id="newTagName" class="form-control" placeholder="Tag name">
+                            </div>
+                            <div class="form-group">
+                                <input type="color" id="newTagColor" class="form-control" value="#3b82f6">
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" id="saveTagBtn" class="btn btn--primary">Save Tag</button>
+                                <button type="button" id="cancelTagBtn" class="btn btn--outline">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
