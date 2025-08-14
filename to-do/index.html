@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fancy Tasks - Smart, Quick, and Delightful</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Left Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="app-title">Fancy Tasks</h1>
+                <p class="app-tagline">Smart, quick, and delightful</p>
+            </div>
+
+            <!-- Search Box -->
+            <div class="search-container">
+                <div class="search-input-wrapper">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search (e.g., tag:work completed:true before:2025-01-01)">
+                    <span class="search-icon">🔍</span>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="navigation">
+                <button class="nav-item active" data-filter="all">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-text">All</span>
+                    <span class="task-count" id="allCount">0</span>
+                </button>
+                <button class="nav-item" data-filter="today">
+                    <span class="nav-icon">📅</span>
+                    <span class="nav-text">Today</span>
+                    <span class="task-count" id="todayCount">0</span>
+                </button>
+                <button class="nav-item" data-filter="upcoming">
+                    <span class="nav-icon">⏰</span>
+                    <span class="nav-text">Upcoming</span>
+                    <span class="task-count" id="upcomingCount">0</span>
+                </button>
+                <button class="nav-item" data-filter="overdue">
+                    <span class="nav-icon">⚠️</span>
+                    <span class="nav-text">Overdue</span>
+                    <span class="task-count" id="overdueCount">0</span>
+                </button>
+                <button class="nav-item" data-filter="completed">
+                    <span class="nav-icon">✅</span>
+                    <span class="nav-text">Completed</span>
+                    <span class="task-count" id="completedCount">0</span>
+                </button>
+            </nav>
+
+            <!-- Show Completed Checkbox -->
+            <div class="filter-option">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="showCompleted" checked>
+                    <span class="checkbox-custom"></span>
+                    Show completed
+                </label>
+            </div>
+
+            <!-- Sort Dropdown -->
+            <div class="sort-container">
+                <label class="form-label">Sort by</label>
+                <select id="sortBy" class="form-control">
+                    <option value="createdDate">Created Date</option>
+                    <option value="priority">Priority</option>
+                    <option value="dueDate">Due Date</option>
+                </select>
+            </div>
+
+            <!-- Tags Section -->
+            <div class="tags-section">
+                <h3 class="section-title">Tags</h3>
+                <div class="tags-container" id="tagsContainer">
+                    <!-- Tags will be dynamically populated -->
+                </div>
+            </div>
+
+            <!-- Bottom Actions -->
+            <div class="sidebar-footer">
+                <div id="fileStatus" class="selected-count" style="margin: 0 0 8px 0;">No file open</div>
+                <button class="btn btn--outline btn--full-width" id="openFileBtn">Open file…</button>
+                <button class="btn btn--outline btn--full-width" id="saveFileBtn">Save</button>
+                <button class="btn btn--outline btn--full-width" id="saveAsFileBtn">Save as…</button>
+                <button class="btn btn--outline btn--full-width" id="importBtn">Import JSON…</button>
+                <input type="file" id="importFileInput" accept="application/json" style="display:none;" />
+                <button class="btn btn--outline btn--full-width" id="exportBtn">Export JSON</button>
+                <button class="btn btn--outline btn--full-width" id="exportMdBtn">Export Markdown</button>
+                <label class="checkbox-label" style="margin-top: 8px;">
+                    <input type="checkbox" id="autoSaveToggle">
+                    <span class="checkbox-custom"></span>
+                    Auto-save to file
+                </label>
+                <div class="form-group" style="margin-top: 8px;">
+                    <label class="form-label" for="themeSelect">Theme</label>
+                    <select id="themeSelect" class="form-control">
+                        <option value="auto">Auto</option>
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </div>
+                <button class="btn btn--outline btn--full-width" id="resetBtn">Reset</button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="main-header">
+                <div class="header-left">
+                    <h1 class="page-title">Tasks</h1>
+                    <div class="stats">
+                        <span id="taskStats">0 tasks, 0% complete</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn--secondary" id="clearSearchBtn" style="display: none;">Clear search</button>
+                    <button class="btn btn--secondary" id="analyticsBtn">Show analytics</button>
+                </div>
+            </header>
+
+            <!-- Add Task Form -->
+            <div class="add-task-section">
+                <form id="addTaskForm" class="add-task-form">
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <input type="text" id="taskTitle" class="form-control" placeholder="Task title..." required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <textarea id="taskDescription" class="form-control" placeholder="Add notes..." rows="2"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <button type="button" id="addSubtaskBtn" class="btn btn--outline btn--sm">+ Add subtask</button>
+                        </div>
+                        <div class="form-group">
+                            <input type="date" id="taskDueDate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <select id="taskPriority" class="form-control">
+                                <option value="Low">Low Priority</option>
+                                <option value="Med">Med Priority</option>
+                                <option value="High">High Priority</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="taskTags" class="form-control" placeholder="Tags (comma separated)">
+                        </div>
+                        <div class="form-group">
+                            <button type="submit" class="btn btn--primary">Add Task</button>
+                        </div>
+                    </div>
+
+                    <div id="subtasksContainer" class="subtasks-container" style="display: none;">
+                        <!-- Subtasks will be added here dynamically -->
+                    </div>
+                </form>
+            </div>
+
+            <!-- Bulk Actions -->
+            <div class="bulk-actions">
+                <div class="bulk-left">
+                    <button class="btn btn--outline btn--sm" id="markDoneBtn">Mark done</button>
+                    <button class="btn btn--outline btn--sm" id="deleteSelectedBtn">Delete</button>
+                    <span class="selected-count" id="selectedCount">Selected 0</span>
+                </div>
+                <div class="bulk-right">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="selectAllCheckbox">
+                        <span class="checkbox-custom"></span>
+                        Select all
+                    </label>
+                </div>
+            </div>
+
+            <!-- Task List -->
+            <div class="task-list" id="taskList">
+                <!-- Tasks will be dynamically populated -->
+            </div>
+
+            <!-- Analytics Modal -->
+            <div id="analyticsModal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Analytics</h2>
+                        <button class="modal-close" id="closeAnalyticsBtn">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="analytics-grid">
+                            <div class="analytics-card">
+                                <h3>Task Completion</h3>
+                                <div class="stat-number" id="completionRate">0%</div>
+                            </div>
+                            <div class="analytics-card">
+                                <h3>Overdue Tasks</h3>
+                                <div class="stat-number" id="overdueTasksCount">0</div>
+                            </div>
+                            <div class="analytics-card">
+                                <h3>Tasks Due Today</h3>
+                                <div class="stat-number" id="todayTasksCount">0</div>
+                            </div>
+                            <div class="analytics-card">
+                                <h3>Total Tasks</h3>
+                                <div class="stat-number" id="totalTasksCount">0</div>
+                            </div>
+                            <div class="analytics-card">
+                                <h3>Completed (7d)</h3>
+                                <div class="stat-number" id="completed7d">0</div>
+                            </div>
+                            <div class="analytics-card">
+                                <h3>Completed (30d)</h3>
+                                <div class="stat-number" id="completed30d">0</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 16px;">
+                            <h3 class="section-title">Top Tags</h3>
+                            <div id="topTags" class="tags-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Task Modal -->
+            <div id="editTaskModal" class="modal hidden">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Edit Task</h2>
+                        <button class="modal-close" id="closeEditBtn">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editTaskForm">
+                            <input type="hidden" id="editTaskId">
+                            <div class="form-group">
+                                <label class="form-label">Task Title</label>
+                                <input type="text" id="editTaskTitle" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Description</label>
+                                <textarea id="editTaskDescription" class="form-control" rows="3"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Due Date</label>
+                                <input type="date" id="editTaskDueDate" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Priority</label>
+                                <select id="editTaskPriority" class="form-control">
+                                    <option value="Low">Low Priority</option>
+                                    <option value="Med">Med Priority</option>
+                                    <option value="High">High Priority</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tags</label>
+                                <input type="text" id="editTaskTags" class="form-control" placeholder="Tags (comma separated)">
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn--outline" id="cancelEditBtn">Cancel</button>
+                                <button type="submit" class="btn btn--primary">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
