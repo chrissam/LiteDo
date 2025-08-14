@@ -35,6 +35,12 @@ class TodoApp {
         this.activePreset = null;
         this._filterDebounceTimer = null;
         
+        // Analytics date range
+        this.analyticsDateRange = {
+            from: null,
+            to: null
+        };
+        
         this.init();
     }
 
@@ -308,6 +314,9 @@ class TodoApp {
                 this.showAnalytics();
             });
         }
+        
+        // Analytics date range controls
+        this.bindAnalyticsDateRangeEvents();
 
         const closeAnalyticsBtn = document.getElementById('closeAnalyticsBtn');
         if (closeAnalyticsBtn) {
@@ -1537,14 +1546,54 @@ class TodoApp {
             }
         }
     }
+    
+    // Get tasks filtered by analytics date range
+    getAnalyticsFilteredTasks() {
+        let filteredTasks = this.tasks;
+        
+        if (this.analyticsDateRange.from || this.analyticsDateRange.to) {
+            console.log('Filtering tasks by date range:', this.analyticsDateRange);
+            console.log('Total tasks before filtering:', this.tasks.length);
+            
+            filteredTasks = this.tasks.filter(task => {
+                const taskDate = task.createdDate;
+                if (!taskDate) return false;
+                
+                // Convert dates to Date objects for proper comparison
+                const taskDateObj = new Date(taskDate);
+                const fromDateObj = this.analyticsDateRange.from ? new Date(this.analyticsDateRange.from) : null;
+                const toDateObj = this.analyticsDateRange.to ? new Date(this.analyticsDateRange.to) : null;
+                
+                if (fromDateObj && taskDateObj < fromDateObj) {
+                    return false;
+                }
+                
+                if (toDateObj && taskDateObj > toDateObj) {
+                    return false;
+                }
+                
+                return true;
+            });
+            
+            console.log('Tasks after filtering:', filteredTasks.length);
+        }
+        
+        return filteredTasks;
+    }
 
     // Show analytics
     showAnalytics() {
-        const total = this.tasks.length;
-        const completed = this.tasks.filter(t => t.completed).length;
+        // Initialize date range if not set
+        if (!this.analyticsDateRange.from && !this.analyticsDateRange.to) {
+            this.setDateRangePreset('30d');
+        }
+        
+        const filteredTasks = this.getAnalyticsFilteredTasks();
+        const total = filteredTasks.length;
+        const completed = filteredTasks.filter(t => t.completed).length;
         const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
-        const overdue = this.tasks.filter(t => t.dueDate && t.dueDate < this.getCurrentDate() && !t.completed).length;
-        const today = this.tasks.filter(t => t.dueDate === this.getCurrentDate() && !t.completed).length;
+        const overdue = filteredTasks.filter(t => t.dueDate && t.dueDate < this.getCurrentDate() && !t.completed).length;
+        const today = filteredTasks.filter(t => t.dueDate === this.getCurrentDate() && !t.completed).length;
         const daysAgo = (n) => {
             const d = new Date();
             d.setDate(d.getDate() - n);
@@ -1553,8 +1602,8 @@ class TodoApp {
             const dd = String(d.getDate()).padStart(2, '0');
             return `${yyyy}-${mm}-${dd}`;
         };
-        const completed7d = this.tasks.filter(t => t.completed && t.completedDate && t.completedDate >= daysAgo(7)).length;
-        const completed30d = this.tasks.filter(t => t.completed && t.completedDate && t.completedDate >= daysAgo(30)).length;
+        const completed7d = filteredTasks.filter(t => t.completed && t.completedDate && t.completedDate >= daysAgo(7)).length;
+        const completed30d = filteredTasks.filter(t => t.completed && t.completedDate && t.completedDate >= daysAgo(30)).length;
 
         // Update basic stats
         const elements = {
@@ -1584,10 +1633,11 @@ class TodoApp {
 
     // Update priority distribution chart
     updatePriorityChart() {
+        const filteredTasks = this.getAnalyticsFilteredTasks();
         const priorityCounts = {
-            High: this.tasks.filter(t => t.priority === 'High').length,
-            Med: this.tasks.filter(t => t.priority === 'Med').length,
-            Low: this.tasks.filter(t => t.priority === 'Low').length
+            High: filteredTasks.filter(t => t.priority === 'High').length,
+            Med: filteredTasks.filter(t => t.priority === 'Med').length,
+            Low: filteredTasks.filter(t => t.priority === 'Low').length
         };
 
         const maxCount = Math.max(...Object.values(priorityCounts));
@@ -1637,7 +1687,8 @@ class TodoApp {
             date.setDate(date.getDate() - i);
             const dateStr = this.formatDateForFilter(date);
             
-            const completedCount = this.tasks.filter(t => 
+            const filteredTasks = this.getAnalyticsFilteredTasks();
+            const completedCount = filteredTasks.filter(t => 
                 t.completed && t.completedDate === dateStr
             ).length;
             
@@ -1668,7 +1719,8 @@ class TodoApp {
         const tagsChartItems = document.getElementById('tagsChartItems');
         if (!tagsChartItems) return;
 
-        const tagCounts = this.tasks.flatMap(t => t.tags).reduce((acc, tag) => {
+        const filteredTasks = this.getAnalyticsFilteredTasks();
+        const tagCounts = filteredTasks.flatMap(t => t.tags).reduce((acc, tag) => {
             acc[tag] = (acc[tag] || 0) + 1;
             return acc;
         }, {});
@@ -1705,7 +1757,8 @@ class TodoApp {
         const avgTasksPerDay = document.getElementById('avgTasksPerDay');
         if (avgTasksPerDay) {
             const totalDays = this.getDaysSinceFirstTask();
-            const avg = totalDays > 0 ? (this.tasks.length / totalDays).toFixed(1) : '0';
+            const filteredTasks = this.getAnalyticsFilteredTasks();
+            const avg = totalDays > 0 ? (filteredTasks.length / totalDays).toFixed(1) : '0';
             avgTasksPerDay.textContent = avg;
         }
 
@@ -1733,9 +1786,10 @@ class TodoApp {
 
     // Helper methods for productivity metrics
     getDaysSinceFirstTask() {
-        if (this.tasks.length === 0) return 0;
+        const filteredTasks = this.getAnalyticsFilteredTasks();
+        if (filteredTasks.length === 0) return 0;
         
-        const firstTask = this.tasks.reduce((earliest, task) => {
+        const firstTask = filteredTasks.reduce((earliest, task) => {
             return task.createdDate < earliest.createdDate ? task : earliest;
         });
         
@@ -1754,7 +1808,8 @@ class TodoApp {
             date.setDate(date.getDate() - i);
             const dateStr = this.formatDateForFilter(date);
             
-            const completedCount = this.tasks.filter(t => 
+            const filteredTasks = this.getAnalyticsFilteredTasks();
+            const completedCount = filteredTasks.filter(t => 
                 t.completed && t.completedDate === dateStr
             ).length;
             
@@ -1769,9 +1824,10 @@ class TodoApp {
     }
 
     getBusiestDay() {
+        const filteredTasks = this.getAnalyticsFilteredTasks();
         const dayCounts = {};
         
-        this.tasks.forEach(task => {
+        filteredTasks.forEach(task => {
             if (task.createdDate) {
                 const date = new Date(task.createdDate);
                 const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
@@ -2413,6 +2469,158 @@ class TodoApp {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // Bind analytics date range events
+    bindAnalyticsDateRangeEvents() {
+        // Date range inputs
+        const fromDateInput = document.getElementById('analyticsFromDate');
+        const toDateInput = document.getElementById('analyticsToDate');
+        
+        if (fromDateInput && toDateInput) {
+            fromDateInput.addEventListener('change', () => {
+                console.log('From date changed to:', fromDateInput.value);
+                this.analyticsDateRange.from = fromDateInput.value;
+                this.updateAnalyticsForDateRange();
+            });
+            
+            toDateInput.addEventListener('change', () => {
+                console.log('To date changed to:', toDateInput.value);
+                this.analyticsDateRange.to = toDateInput.value;
+                this.updateAnalyticsForDateRange();
+            });
+        }
+        
+        // Date range preset buttons
+        const presetButtons = document.querySelectorAll('.date-range-presets .btn');
+        presetButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                console.log('Preset button clicked:', btn.dataset.range);
+                this.setDateRangePreset(btn.dataset.range);
+            });
+        });
+    }
+    
+    // Set date range preset
+    setDateRangePreset(range) {
+        const fromDateInput = document.getElementById('analyticsFromDate');
+        const toDateInput = document.getElementById('analyticsToDate');
+        
+        if (!fromDateInput || !toDateInput) return;
+        
+        const today = new Date();
+        let fromDate = new Date();
+        
+        // Remove active class from all buttons
+        document.querySelectorAll('.date-range-presets .btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Add active class to clicked button
+        const clickedBtn = document.querySelector(`[data-range="${range}"]`);
+        if (clickedBtn) {
+            clickedBtn.classList.add('active');
+        }
+        
+        switch (range) {
+            case '7d':
+                fromDate.setDate(today.getDate() - 7);
+                break;
+            case '30d':
+                fromDate.setDate(today.getDate() - 30);
+                break;
+            case '90d':
+                fromDate.setDate(today.getDate() - 90);
+                break;
+            case '1y':
+                fromDate.setFullYear(today.getFullYear() - 1);
+                break;
+            case 'all':
+                fromDate = null;
+                break;
+        }
+        
+        if (fromDate) {
+            fromDateInput.value = this.formatDateForInput(fromDate);
+            this.analyticsDateRange.from = fromDateInput.value;
+        } else {
+            fromDateInput.value = '';
+            this.analyticsDateRange.from = null;
+        }
+        
+        toDateInput.value = this.formatDateForInput(today);
+        this.analyticsDateRange.to = toDateInput.value;
+        
+        console.log('Date range preset set:', range, 'From:', this.analyticsDateRange.from, 'To:', this.analyticsDateRange.to);
+        this.updateAnalyticsForDateRange();
+    }
+    
+    // Format date for input field
+    formatDateForInput(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    
+    // Update analytics for current date range
+    updateAnalyticsForDateRange() {
+        console.log('Updating analytics for date range:', this.analyticsDateRange);
+        // Update basic stats in analytics modal
+        this.updateAnalyticsStats();
+        this.updatePriorityChart();
+        this.updateTrendChart();
+        this.updateTagsChart();
+        this.updateProductivityMetrics();
+    }
+    
+    // Update basic stats in analytics modal
+    updateAnalyticsStats() {
+        const filteredTasks = this.getAnalyticsFilteredTasks();
+        const total = filteredTasks.length;
+        const completed = filteredTasks.filter(t => t.completed).length;
+        const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+        const overdue = filteredTasks.filter(t => t.dueDate && t.dueDate < this.getCurrentDate() && !t.completed).length;
+        const today = filteredTasks.filter(t => t.dueDate === this.getCurrentDate() && !t.completed).length;
+        
+        const daysAgo = (n) => {
+            const d = new Date();
+            d.setDate(d.getDate() - n);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        };
+        
+        const completed7d = filteredTasks.filter(t => t.completed && t.completedDate && t.completedDate >= daysAgo(7)).length;
+        const completed30d = filteredTasks.filter(t => t.completed && t.completedDate && t.completedDate >= daysAgo(30)).length;
+
+        console.log('Updating analytics stats:', {
+            total,
+            completed,
+            completionRate,
+            overdue,
+            today,
+            completed7d,
+            completed30d
+        });
+
+        // Update basic stats elements
+        const elements = {
+            completionRate: document.getElementById('completionRate'),
+            overdueTasksCount: document.getElementById('overdueTasksCount'),
+            todayTasksCount: document.getElementById('todayTasksCount'),
+            totalTasksCount: document.getElementById('totalTasksCount'),
+            completed7d: document.getElementById('completed7d'),
+            completed30d: document.getElementById('completed30d')
+        };
+
+        if (elements.completionRate) elements.completionRate.textContent = `${completionRate}%`;
+        if (elements.overdueTasksCount) elements.overdueTasksCount.textContent = overdue;
+        if (elements.totalTasksCount) elements.totalTasksCount.textContent = total;
+        if (elements.todayTasksCount) elements.todayTasksCount.textContent = today;
+        if (elements.completed7d) elements.completed7d.textContent = completed7d;
+        if (elements.completed30d) elements.completed30d.textContent = completed30d;
     }
 
     // Bind advanced filter events

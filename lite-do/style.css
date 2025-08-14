@@ -1601,6 +1601,73 @@ select.form-control {
   margin-top: var(--space-20);
 }
 
+/* Analytics Date Range */
+.analytics-date-range {
+  margin-bottom: var(--space-32);
+  padding: var(--space-24);
+  background: var(--color-background-secondary);
+  border-radius: var(--radius-base);
+  border: 1px solid var(--color-border);
+}
+
+.analytics-date-range h3 {
+  margin: 0 0 var(--space-16) 0;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+}
+
+.date-range-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.date-range-inputs {
+  display: flex;
+  gap: var(--space-16);
+  align-items: flex-end;
+}
+
+.date-range-inputs .form-group {
+  flex: 1;
+}
+
+.date-range-inputs label {
+  display: block;
+  margin-bottom: var(--space-8);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.date-range-inputs input {
+  width: 100%;
+  padding: var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.date-range-presets {
+  display: flex;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+}
+
+.date-range-presets .btn {
+  padding: var(--space-8) var(--space-16);
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-sm);
+}
+
+.date-range-presets .btn.active {
+  background: var(--color-primary);
+  color: var(--color-btn-primary-text);
+  border-color: var(--color-primary);
+}
+
 /* Analytics Grid */
 .analytics-grid {
   display: grid;
@@ -1682,6 +1749,14 @@ select.form-control {
   .analytics-grid {
     grid-template-columns: 1fr;
   }
+  
+  .date-range-inputs {
+    flex-direction: column;
+  }
+  
+  .date-range-presets {
+    justify-content: center;
+  }
 }
 
 /* Animations */
@@ -1721,6 +1796,7 @@ select.form-control {
 
 /* Advanced Filters Button Section */
 .filters-button-section {
+  margin-top: var(--space-24);
   margin-bottom: var(--space-20);
   text-align: center;
 }
