@@ -2,15 +2,36 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>LiteDo — Simple, Light, Fast</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Simple, Light, Fast task management app">
+    <meta name="theme-color" content="#218081">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="LiteDo">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- Icons -->
     <link rel="icon" type="image/png" href="assets/litedo-favicon.png">
+    <link rel="apple-touch-icon" href="assets/litedo-favicon.png">
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" title="Toggle menu">☰</button>
+    
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+    
     <div class="app-container">
         <!-- Left Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="brand-row">
                     <img class="app-logo" src="assets/litedo-feather.png" alt="LiteDo feather quill and ink logo" />
@@ -155,6 +176,11 @@
 
         <!-- Main Content Area -->
         <main class="main-content">
+            <!-- Mobile Logo - Separate Component -->
+            <div class="mobile-page-logo-container">
+                <img class="mobile-logo" src="assets/litedo-feather.png" alt="LiteDo logo" />
+            </div>
+            
             <!-- Header -->
             <header class="main-header">
                 <div class="header-left">
@@ -165,7 +191,14 @@
                 </div>
                 <div class="header-right">
                     <button class="btn btn--secondary" id="clearSearchBtn" style="display: none;">Clear search</button>
-                    <button class="btn btn--secondary" id="analyticsBtn">Show analytics</button>
+                    <!-- Mobile Action Buttons - Only visible on mobile -->
+                    <button class="btn btn--secondary btn--icon mobile-only" id="mobileFiltersBtn" title="Filters">🔍</button>
+                    <button class="btn btn--primary btn--icon mobile-only" id="mobileAddTaskBtn" title="Add Task">+</button>
+                    <!-- Analytics Button - Different styles for mobile vs desktop -->
+                    <button class="btn btn--secondary btn--icon mobile-only" id="analyticsBtn" title="Show analytics">
+                        📶
+                    </button>
+                    <button class="btn btn--secondary desktop-only" id="desktopAnalyticsBtn" title="Show analytics">Show analytics</button>
                 </div>
             </header>
 
@@ -204,6 +237,8 @@
             <div class="task-list" id="taskList">
                 <!-- Tasks will be dynamically populated -->
             </div>
+            
+
 
             <!-- Analytics Modal -->
             <div id="analyticsModal" class="modal hidden">
@@ -426,12 +461,9 @@
             <!-- Advanced Filters Modal -->
             <div id="filtersModal" class="modal hidden">
                 <div class="modal-content filters-modal-content">
-                    <div class="modal-header">
+                                        <div class="modal-header">
                         <h2>Advanced Filters</h2>
-                        <div class="filters-header-actions">
-                            <span class="filter-help" title="Press 'F' to focus filters">⌨️ F</span>
-                            <button class="modal-close" id="closeFiltersBtn">×</button>
-                        </div>
+                        <button class="modal-close" id="closeFiltersBtn">×</button>
                     </div>
                     <div class="modal-body">
                         <div class="filters-content" id="filtersContent">
@@ -510,6 +542,22 @@
                                 <button type="button" id="applyFiltersBtn" class="btn btn--primary">Apply Filters</button>
                                 <button type="button" id="clearFiltersBtn" class="btn btn--outline">Clear All</button>
                                 <button type="button" id="saveFiltersBtn" class="btn btn--secondary">Save Preset</button>
+                            </div>
+                            
+                            <!-- Current Filters Display -->
+                            <div class="current-filters-section">
+                                <h4>Current Filters Applied</h4>
+                                <div class="current-filters-list" id="currentFiltersList">
+                                    <p class="no-filters-message">No filters currently applied</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Filter Summary Component -->
+                            <div class="filter-summary-section">
+                                <h4>Filter Summary</h4>
+                                <div class="filter-summary" id="filterSummaryComponent" style="display: none;">
+                                    <small></small>
+                                </div>
                             </div>
                             
                             <!-- Saved Filter Presets -->
@@ -652,5 +700,20 @@
     </div>
 
     <script src="app.js"></script>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>

@@ -307,10 +307,18 @@ class TodoApp {
             });
         }
 
-        // Analytics modal
+        // Analytics modal - handle both mobile and desktop buttons
         const analyticsBtn = document.getElementById('analyticsBtn');
+        const desktopAnalyticsBtn = document.getElementById('desktopAnalyticsBtn');
+        
         if (analyticsBtn) {
             analyticsBtn.addEventListener('click', () => {
+                this.showAnalytics();
+            });
+        }
+        
+        if (desktopAnalyticsBtn) {
+            desktopAnalyticsBtn.addEventListener('click', () => {
                 this.showAnalytics();
             });
         }
@@ -997,6 +1005,11 @@ class TodoApp {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.classList.remove('hidden');
+            
+            // Special handling for filters modal
+            if (modalId === 'filtersModal') {
+                this.updateCurrentFiltersDisplay();
+            }
         }
     }
 
@@ -1475,6 +1488,80 @@ class TodoApp {
 
         this.renderTags();
         this.updateStats();
+        this.initMobileMenu();
+    }
+
+    // Initialize mobile menu functionality
+    initMobileMenu() {
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        const sidebar = document.getElementById('sidebar');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+
+        console.log('Mobile menu elements:', { mobileMenuToggle, sidebar, mobileOverlay });
+
+        if (mobileMenuToggle && sidebar && mobileOverlay) {
+            // Toggle sidebar
+            mobileMenuToggle.addEventListener('click', () => {
+                console.log('Mobile menu toggle clicked');
+                sidebar.classList.toggle('open');
+                mobileOverlay.classList.toggle('open');
+            });
+
+            // Close sidebar when clicking overlay
+            mobileOverlay.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.remove('open');
+            });
+
+            // Close sidebar when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!sidebar.contains(e.target) && !mobileMenuToggle.contains(e.target)) {
+                    sidebar.classList.remove('open');
+                    mobileOverlay.classList.remove('open');
+                }
+            });
+
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 768) {
+                    sidebar.classList.remove('open');
+                    mobileOverlay.classList.remove('open');
+                }
+            });
+            
+            // Initialize mobile action buttons
+            this.initMobileActionButtons();
+        }
+    }
+    
+    // Initialize mobile action buttons functionality
+    initMobileActionButtons() {
+        const mobileAddTaskBtn = document.getElementById('mobileAddTaskBtn');
+        const mobileFiltersBtn = document.getElementById('mobileFiltersBtn');
+        
+        console.log('Mobile action button elements:', { mobileAddTaskBtn, mobileFiltersBtn });
+        
+        if (mobileAddTaskBtn) {
+            mobileAddTaskBtn.addEventListener('click', () => {
+                console.log('Mobile add task button clicked');
+                // Open add task modal
+                const addTaskModal = document.getElementById('addTaskModal');
+                if (addTaskModal) {
+                    addTaskModal.classList.remove('hidden');
+                }
+            });
+        }
+        
+        if (mobileFiltersBtn) {
+            mobileFiltersBtn.addEventListener('click', () => {
+                console.log('Mobile filters button clicked');
+                // Open filters modal
+                const filtersModal = document.getElementById('filtersModal');
+                if (filtersModal) {
+                    filtersModal.classList.remove('hidden');
+                }
+            });
+        }
     }
 
     // Render tags
@@ -2806,6 +2893,108 @@ class TodoApp {
         this.updateCounts();
         this.showFilterStatus();
         this.showFilterSummary();
+        this.updateCurrentFiltersDisplay();
+    }
+    
+    // Update current filters display
+    updateCurrentFiltersDisplay() {
+        const currentFiltersList = document.getElementById('currentFiltersList');
+        if (!currentFiltersList) return;
+        
+        const activeFilters = [];
+        
+        // Check date range filters
+        if (this.advancedFilters.fromDate || this.advancedFilters.toDate) {
+            const dateRange = `${this.advancedFilters.fromDate || 'Any'} to ${this.advancedFilters.toDate || 'Any'}`;
+            activeFilters.push({
+                type: 'Date Range',
+                value: dateRange,
+                id: 'dateRange'
+            });
+        }
+        
+        // Check priority filter
+        if (this.advancedFilters.priority) {
+            activeFilters.push({
+                type: 'Priority',
+                value: this.advancedFilters.priority,
+                id: 'priority'
+            });
+        }
+        
+        // Check status filter
+        if (this.advancedFilters.status) {
+            activeFilters.push({
+                type: 'Status',
+                value: this.advancedFilters.status,
+                id: 'status'
+            });
+        }
+        
+        // Check tags filter
+        if (this.advancedFilters.tags && this.advancedFilters.tags.length > 0) {
+            this.advancedFilters.tags.forEach(tag => {
+                activeFilters.push({
+                    type: 'Tag',
+                    value: tag,
+                    id: `tag-${tag}`
+                });
+            });
+        }
+        
+        // Check created date filter
+        if (this.advancedFilters.createdDate && this.advancedFilters.createdDate !== '') {
+            activeFilters.push({
+                type: 'Created',
+                value: this.advancedFilters.createdDate,
+                id: 'createdDate'
+            });
+        }
+        
+        // Check due date filter
+        if (this.advancedFilters.dueDate && this.advancedFilters.dueDate !== '') {
+            activeFilters.push({
+                type: 'Due Date',
+                value: this.advancedFilters.dueDate,
+                id: 'dueDate'
+            });
+        }
+        
+        if (activeFilters.length === 0) {
+            currentFiltersList.innerHTML = '<p class="no-filters-message">No filters currently applied</p>';
+        } else {
+            currentFiltersList.innerHTML = activeFilters.map(filter => `
+                <div class="current-filter-item">
+                    <span>${filter.type}: ${filter.value}</span>
+                    <button class="remove-filter" onclick="window.app.removeFilter('${filter.id}')" title="Remove filter">×</button>
+                </div>
+            `).join('');
+        }
+        
+        // Also update the filter summary
+        this.showFilterSummary();
+    }
+    
+    // Remove individual filter
+    removeFilter(filterId) {
+        if (filterId === 'dateRange') {
+            this.advancedFilters.fromDate = '';
+            this.advancedFilters.toDate = '';
+        } else if (filterId === 'priority') {
+            this.advancedFilters.priority = '';
+        } else if (filterId === 'createdDate') {
+            this.advancedFilters.createdDate = '';
+        } else if (filterId === 'dueDate') {
+            this.advancedFilters.dueDate = '';
+        } else if (filterId.startsWith('tag-')) {
+            const tagToRemove = filterId.replace('tag-', '');
+            this.advancedFilters.tags = this.advancedFilters.tags.filter(tag => tag !== tagToRemove);
+        }
+        
+        // Update the form inputs and display
+        this.updateFilterFormInputs();
+        this.updateCurrentFiltersDisplay();
+        this.applyFilters();
     }
 
     // Debounced version of applyFilters for better performance
@@ -2853,6 +3042,9 @@ class TodoApp {
         this.updateCounts();
         this.hideFilterStatus();
         this.hideFilterSummary();
+        
+        // Update the current filters display to show "No filters currently applied"
+        this.updateCurrentFiltersDisplay();
     }
 
     // Show filter status
@@ -2979,6 +3171,9 @@ class TodoApp {
         this.renderFilterPresets();
         this.showFilterStatus();
         this.showFilterSummary();
+        
+        // Update the current filters display
+        this.updateCurrentFiltersDisplay();
     }
 
     // Delete filter preset
@@ -3030,6 +3225,9 @@ class TodoApp {
             filterToDate.value = this.formatDateForFilter(lastDayOfMonth);
             this.advancedFilters.toDate = this.formatDateForFilter(lastDayOfMonth);
         }
+        
+        // Update the current filters display after setting defaults
+        this.updateCurrentFiltersDisplay();
     }
 
     // Get filter summary for display
@@ -3063,17 +3261,10 @@ class TodoApp {
         return summary;
     }
 
-    // Show filter summary in the modal header
+    // Show filter summary in the dedicated component
     showFilterSummary() {
-        const modalHeader = document.querySelector('#filtersModal .modal-header');
-        if (!modalHeader) return;
-
-        let summaryElement = modalHeader.querySelector('.filter-summary');
-        if (!summaryElement) {
-            summaryElement = document.createElement('div');
-            summaryElement.className = 'filter-summary';
-            modalHeader.appendChild(summaryElement);
-        }
+        const summaryElement = document.getElementById('filterSummaryComponent');
+        if (!summaryElement) return;
 
         const summary = this.getFilterSummary();
         if (summary.length > 0) {

@@ -1,0 +1,35 @@
+{
+  "name": "LiteDo",
+  "short_name": "LiteDo",
+  "description": "Simple, Light, Fast task management app",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fcfcf9",
+  "theme_color": "#218081",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "assets/litedo-favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/litedo-favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": [
+    {
+      "src": "assets/litedo-favicon.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ]
+}
