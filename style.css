@@ -809,7 +809,16 @@ select.form-control {
 .app-tagline {
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   margin: 0;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.85;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.app-tagline:hover {
+  opacity: 1;
 }
 
 /* Search Container */
