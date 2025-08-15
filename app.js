@@ -53,6 +53,15 @@ class TodoApp {
         this.setupFileSupportUI();
         this.setupAutoReloadOnFocus();
         this.tryReopenLastFile();
+        
+        // Handle window resize to clean up modal-open class and update file support UI
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                document.body.classList.remove('modal-open');
+            }
+            // Update file support UI when switching between mobile/desktop
+            this.setupFileSupportUI();
+        });
     }
 
     // Load data from localStorage or use sample data
@@ -574,14 +583,28 @@ class TodoApp {
         const saveAsBtn = document.getElementById('saveAsFileBtn');
         const autoSaveToggle = document.getElementById('autoSaveToggle');
         const quickDlToggle = document.getElementById('quickDownloadToggle');
-        if (!this.isFileSystemSupported) {
-            // Hide Save/Save As for non-Chromium to avoid confusion; rely on Export/Import
+        
+        // Check if we're on mobile
+        const isMobile = window.innerWidth <= 768;
+        
+        if (!this.isFileSystemSupported || isMobile) {
+            // Hide Save/Save As for non-Chromium or mobile devices
             if (saveBtn) { saveBtn.style.display = 'none'; }
             if (saveAsBtn) { saveAsBtn.style.display = 'none'; }
-            if (autoSaveToggle) { autoSaveToggle.disabled = true; autoSaveToggle.title = 'Auto-save not supported in this browser'; }
+            if (autoSaveToggle) { 
+                autoSaveToggle.disabled = true; 
+                autoSaveToggle.title = isMobile ? 'Auto-save not supported on mobile devices' : 'Auto-save not supported in this browser'; 
+            }
             if (quickDlToggle) { quickDlToggle.parentElement.style.display = 'none'; }
+            
             const status = document.getElementById('fileStatus');
-            if (status) status.textContent = 'Firefox: using download-based saving. Consider Chrome for direct file editing.';
+            if (status) {
+                if (isMobile) {
+                    status.textContent = 'Mobile: Use Export/Import for data backup.';
+                } else {
+                    status.textContent = 'Firefox: using download-based saving. Consider Chrome for direct file editing.';
+                }
+            }
         }
     }
 
@@ -1006,6 +1029,11 @@ class TodoApp {
         if (modal) {
             modal.classList.remove('hidden');
             
+            // Prevent body scrolling on mobile when modal is open
+            if (window.innerWidth <= 768) {
+                document.body.classList.add('modal-open');
+            }
+            
             // Special handling for filters modal
             if (modalId === 'filtersModal') {
                 this.updateCurrentFiltersDisplay();
@@ -1018,6 +1046,11 @@ class TodoApp {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.classList.add('hidden');
+            
+            // Re-enable body scrolling on mobile when modal is closed
+            if (window.innerWidth <= 768) {
+                document.body.classList.remove('modal-open');
+            }
         }
     }
 
