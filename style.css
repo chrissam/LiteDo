@@ -3012,6 +3012,16 @@ select.form-control {
   gap: var(--space-12);
 }
 
+/* Mobile task layout - override desktop */
+@media (max-width: 768px) {
+  .task-item {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: var(--space-12) !important;
+  }
+}
+
 .task-content {
   flex: 1;
   margin-right: var(--space-12);
@@ -3075,7 +3085,8 @@ select.form-control {
     padding: var(--space-8) !important;
     padding-top: 0 !important;
     width: 100% !important;
-    max-width: none !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
   
   /* Mobile header - compact and maximize content space */
@@ -3230,6 +3241,11 @@ select.form-control {
   .task-list {
     gap: var(--space-12);
     padding-bottom: 100px; /* Space for floating action bar */
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
   
   .task-item {
@@ -3239,8 +3255,109 @@ select.form-control {
     box-shadow: var(--mobile-shadow);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: var(--space-12) !important;
+  }
+  
+  /* Force mobile layout - override any desktop styles */
+  .task-item {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: var(--space-12) !important;
+    flex-wrap: wrap !important; /* Allow wrapping for actions */
+  }
+  
+  /* Additional specificity to ensure mobile layout works */
+  body .task-item {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: var(--space-12) !important;
+    flex-wrap: wrap !important; /* Allow wrapping for actions */
+  }
+  
+  /* Left column - checkbox only (minimum width) */
+  .task-item > .task-checkbox {
+    flex-shrink: 0 !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: relative !important;
+  }
+  
+  /* Custom checkbox styling for main task checkbox */
+  .task-item > .task-checkbox .checkbox-custom {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: var(--radius-base) !important;
+    border: 2px solid var(--color-primary) !important;
+    background: var(--color-surface) !important;
+    position: relative !important;
+    cursor: pointer !important;
+    transition: all var(--duration-fast) var(--ease-standard) !important;
+  }
+  
+  .task-item > .task-checkbox .checkbox-custom:after {
+    content: '✓' !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    color: var(--color-primary) !important;
+    font-size: var(--font-size-sm) !important;
+    font-weight: var(--font-weight-bold) !important;
+    opacity: 0 !important;
+    transition: opacity var(--duration-fast) var(--ease-standard) !important;
+  }
+  
+  .task-item > .task-checkbox input[type="checkbox"]:checked + .checkbox-custom {
+    background: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+  }
+  
+  .task-item > .task-checkbox input[type="checkbox"]:checked + .checkbox-custom:after {
+    opacity: 1 !important;
+    color: var(--color-btn-primary-text) !important;
+  }
+  
+  /* Right column - task content (maximum width) */
+  .task-item > .task-content {
+    flex: 1 !important;
+    width: auto !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Ensure subtask checkboxes don't get affected by the main layout */
+  .task-item .subtasks-list .task-checkbox {
+    width: auto !important;
+    min-width: auto !important;
+    flex-shrink: 0 !important;
+    margin-right: var(--space-8) !important;
+  }
+  
+  /* Task actions positioning in mobile layout */
+  .task-item > .task-actions {
+    width: 100% !important;
+    justify-content: center !important;
+    margin-top: var(--space-12) !important;
+    flex-basis: 100% !important; /* Take full width */
+    margin-left: 0 !important; /* Reset margin */
+    margin-top: var(--space-16) !important; /* Add space above actions */
   }
   
   .task-header {
@@ -3256,8 +3373,10 @@ select.form-control {
     font-weight: var(--font-weight-medium);
     color: var(--color-text);
     margin: 0;
-    width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
     word-wrap: break-word;
+    box-sizing: border-box !important;
   }
   
   .task-description {
@@ -3265,8 +3384,10 @@ select.form-control {
     color: var(--color-text-secondary);
     line-height: 1.5;
     margin: var(--space-8) 0;
-    width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
     word-wrap: break-word;
+    box-sizing: border-box !important;
   }
   
   .description-excerpt {
@@ -3785,6 +3906,16 @@ select.form-control {
     justify-content: space-between !important;
     align-items: center !important;
     width: 100% !important;
+    padding: 0 var(--space-8) !important; /* Match cards container padding */
+  }
+  
+  /* Ensure header buttons align with task cards */
+  .header-left-buttons {
+    margin-left: calc(-1 * var(--space-4)) !important; /* Slight left adjustment for perfect alignment */
+  }
+  
+  #mobileAddTaskBtn {
+    margin-right: calc(-1 * var(--space-4)) !important; /* Slight right adjustment for perfect alignment */
   }
   
   /* Left side button group (filters, bulk, analytics) */
