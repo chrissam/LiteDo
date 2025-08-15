@@ -3588,6 +3588,40 @@ select.form-control {
     margin: 0 !important;
   }
   
+  /* Ensure proper spacing between title and meta even without description */
+  .task-title {
+    margin-bottom: var(--space-16) !important;
+    font-size: var(--font-size-lg) !important;
+    font-weight: var(--font-weight-medium) !important;
+    line-height: var(--line-height-tight) !important;
+  }
+  
+  .task-description {
+    margin-bottom: var(--space-16) !important;
+    color: var(--color-text-secondary) !important;
+    font-size: var(--font-size-sm) !important;
+    line-height: var(--line-height-normal) !important;
+  }
+  
+  .task-meta {
+    margin-top: 0 !important;
+    margin-bottom: var(--space-8) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--space-8) !important;
+    flex-wrap: wrap !important;
+  }
+  
+  /* Ensure meta elements have proper spacing */
+  .task-meta > * {
+    margin-bottom: var(--space-4) !important;
+  }
+  
+  /* Add bottom spacing when no subtasks present */
+  .task-item:not(.has-subtasks) .task-content {
+    margin-bottom: var(--space-8) !important;
+  }
+  
   /* Create mobile header section using CSS */
   .task-item > .task-checkbox {
     order: 1;
