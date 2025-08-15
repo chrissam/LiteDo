@@ -59,6 +59,7 @@ class TodoApp {
             if (window.innerWidth > 768) {
                 document.body.classList.remove('modal-open');
                 document.body.classList.remove('sidebar-open');
+                this.enableBodyScroll();
             }
             // Update file support UI when switching between mobile/desktop
             this.setupFileSupportUI();
@@ -1033,6 +1034,7 @@ class TodoApp {
             // Prevent body scrolling on mobile when modal is open
             if (window.innerWidth <= 768) {
                 document.body.classList.add('modal-open');
+                this.disableBodyScroll();
             }
             
             // Special handling for filters modal
@@ -1051,6 +1053,7 @@ class TodoApp {
             // Re-enable body scrolling on mobile when modal is closed
             if (window.innerWidth <= 768) {
                 document.body.classList.remove('modal-open');
+                this.enableBodyScroll();
             }
         }
     }
@@ -1582,11 +1585,13 @@ class TodoApp {
                     mobileOverlay.classList.remove('open');
                     // Re-enable body scrolling when sidebar is closed
                     document.body.classList.remove('sidebar-open');
+                    this.enableBodyScroll();
                 } else {
                     sidebar.classList.add('open');
                     mobileOverlay.classList.add('open');
                     // Prevent body scrolling when sidebar is open
                     document.body.classList.add('sidebar-open');
+                    this.disableBodyScroll();
                 }
                 
                 console.log('Sidebar classes after toggle:', sidebar.classList.toString());
@@ -1602,6 +1607,7 @@ class TodoApp {
                 mobileOverlay.classList.remove('open');
                 // Re-enable body scrolling when sidebar is closed
                 document.body.classList.remove('sidebar-open');
+                this.enableBodyScroll();
             });
 
             // Close sidebar when clicking outside
@@ -1695,6 +1701,17 @@ class TodoApp {
                 bulkToggleBtn.title = isVisible ? 'Bulk Actions' : 'Close Bulk Actions';
             }
         }
+    }
+    
+    // Simple body scroll prevention for mobile
+    disableBodyScroll() {
+        // Just add the class - CSS handles the rest
+        document.body.classList.add('no-scroll');
+    }
+    
+    // Re-enable body scrolling
+    enableBodyScroll() {
+        document.body.classList.remove('no-scroll');
     }
     
     // Initialize mobile action buttons functionality
