@@ -192,37 +192,33 @@
                 <div class="header-right">
                     <button class="btn btn--secondary" id="clearSearchBtn" style="display: none;">Clear search</button>
                     <!-- Mobile Action Buttons - Only visible on mobile -->
-                    <button class="btn btn--secondary btn--icon mobile-only" id="mobileFiltersBtn" title="Filters">🔍</button>
-                    <button class="btn btn--primary btn--icon mobile-only" id="mobileAddTaskBtn" title="Add Task">+</button>
-                    <!-- Analytics Button - Different styles for mobile vs desktop -->
-                    <button class="btn btn--secondary btn--icon mobile-only" id="analyticsBtn" title="Show analytics">
-                        📶
-                    </button>
+                    <div class="header-left-buttons mobile-only">
+                        <button class="btn btn--secondary btn--icon" id="mobileFiltersBtn" title="Filters">🔍</button>
+                        <button class="btn btn--secondary btn--icon" id="mobileBulkToggleBtn" title="Bulk Actions">☑️</button>
+                        <button class="btn btn--secondary btn--icon" id="analyticsBtn" title="Show analytics">📶</button>
+                    </div>
+                    <!-- Create Task Button - Text instead of icon, rightmost position -->
+                    <button class="btn btn--primary mobile-only" id="mobileAddTaskBtn" title="Create Task">Create Task</button>
                     <button class="btn btn--secondary desktop-only" id="desktopAnalyticsBtn" title="Show analytics">Show analytics</button>
                 </div>
             </header>
 
-            <!-- Mobile Bulk Actions - Only visible on mobile -->
-            <div class="mobile-bulk-actions mobile-only">
-                <button class="mobile-bulk-toggle-btn" onclick="window.app.toggleMobileBulkActions()" title="Show bulk actions">
-                    +
-                </button>
-                <div class="mobile-bulk-content collapsed">
-                    <div class="mobile-bulk-actions-panel">
-                        <div class="mobile-bulk-left">
-                            <button class="btn btn--outline btn--sm" id="mobileMarkDoneBtn">Mark done</button>
-                            <button class="btn btn--outline btn--sm" id="mobileDeleteSelectedBtn">Delete</button>
-                        </div>
-                        <div class="mobile-bulk-right">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="mobileSelectAllCheckbox">
-                                <span class="checkbox-custom"></span>
-                                Select all
-                            </label>
-                        </div>
-                        <div class="mobile-bulk-count">
-                            <span id="mobileSelectedCount">0 selected</span>
-                        </div>
+            <!-- Mobile Bulk Actions Panel - Hidden by default, shown when needed -->
+            <div class="mobile-bulk-panel mobile-only" id="mobileBulkPanel" style="display: none;">
+                <div class="mobile-bulk-actions-panel">
+                    <div class="mobile-bulk-left">
+                        <button class="btn btn--outline btn--sm" id="mobileMarkDoneBtn">Mark done</button>
+                        <button class="btn btn--outline btn--sm" id="mobileDeleteSelectedBtn">Delete</button>
+                    </div>
+                    <div class="mobile-bulk-right">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="mobileSelectAllCheckbox">
+                            <span class="checkbox-custom"></span>
+                            Select all
+                        </label>
+                    </div>
+                    <div class="mobile-bulk-count">
+                        <span id="mobileSelectedCount">0 selected</span>
                     </div>
                 </div>
             </div>

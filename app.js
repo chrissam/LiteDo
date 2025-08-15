@@ -1641,12 +1641,29 @@ class TodoApp {
         }
     }
     
+    // Toggle mobile bulk actions panel
+    toggleMobileBulkPanel() {
+        const bulkPanel = document.getElementById('mobileBulkPanel');
+        if (bulkPanel) {
+            const isVisible = bulkPanel.style.display !== 'none';
+            bulkPanel.style.display = isVisible ? 'none' : 'block';
+            
+            // Update button text/icon to indicate state
+            const bulkToggleBtn = document.getElementById('mobileBulkToggleBtn');
+            if (bulkToggleBtn) {
+                bulkToggleBtn.innerHTML = isVisible ? '☑️' : '✕';
+                bulkToggleBtn.title = isVisible ? 'Bulk Actions' : 'Close Bulk Actions';
+            }
+        }
+    }
+    
     // Initialize mobile action buttons functionality
     initMobileActionButtons() {
         const mobileAddTaskBtn = document.getElementById('mobileAddTaskBtn');
         const mobileFiltersBtn = document.getElementById('mobileFiltersBtn');
+        const mobileBulkToggleBtn = document.getElementById('mobileBulkToggleBtn');
         
-        console.log('Mobile action button elements:', { mobileAddTaskBtn, mobileFiltersBtn });
+        console.log('Mobile action button elements:', { mobileAddTaskBtn, mobileFiltersBtn, mobileBulkToggleBtn });
         
         if (mobileAddTaskBtn) {
             mobileAddTaskBtn.addEventListener('click', () => {
@@ -1667,6 +1684,13 @@ class TodoApp {
                 if (filtersModal) {
                     filtersModal.classList.remove('hidden');
                 }
+            });
+        }
+        
+        if (mobileBulkToggleBtn) {
+            mobileBulkToggleBtn.addEventListener('click', () => {
+                console.log('Mobile bulk toggle button clicked');
+                this.toggleMobileBulkPanel();
             });
         }
     }
@@ -2942,24 +2966,9 @@ class TodoApp {
         this.initMobileBulkActions();
     }
     
-    // Toggle mobile bulk actions visibility
+    // Toggle mobile bulk actions visibility (legacy method - now calls new method)
     toggleMobileBulkActions() {
-        const mobileBulkContent = document.querySelector('.mobile-bulk-content');
-        const toggleBtn = document.querySelector('.mobile-bulk-toggle-btn');
-        
-        if (mobileBulkContent && toggleBtn) {
-            if (mobileBulkContent.classList.contains('collapsed')) {
-                // Expand
-                mobileBulkContent.classList.remove('collapsed');
-                mobileBulkContent.classList.add('expanded');
-                toggleBtn.textContent = '×';
-            } else {
-                // Collapse
-                mobileBulkContent.classList.remove('expanded');
-                mobileBulkContent.classList.add('collapsed');
-                toggleBtn.textContent = '+';
-            }
-        }
+        this.toggleMobileBulkPanel();
     }
     
     // Initialize mobile bulk action buttons
