@@ -995,51 +995,91 @@ select.form-control {
   margin-bottom: var(--space-8);
 }
 
+/* Tag Search Input */
+.tag-search-container {
+  margin-bottom: var(--space-12);
+}
+
+.tag-search-input {
+  width: 100%;
+  padding: var(--space-6) var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+.tag-search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+
+.tag-search-input::placeholder {
+  color: var(--color-text-secondary);
+}
+
 .tags-container {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-6);
-  max-height: 160px;
-  overflow: hidden;
+  max-height: 120px;
+  overflow-y: auto;
   position: relative;
-}
-
-.tags-container::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 28px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, var(--color-light-gray) 100%);
-  pointer-events: none;
 }
 
 .tag-pill {
   display: inline-flex;
   align-items: center;
   padding: var(--space-4) var(--space-8);
-  background-color: var(--color-pastel-blue);
-  color: var(--color-slate-900);
+  background-color: var(--color-secondary);
+  color: var(--color-text);
   font-size: var(--font-size-xs);
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-standard);
-  border: 1px solid var(--color-card-border);
+  border: 1px solid var(--color-border);
   box-shadow: var(--shadow-xs);
   font-weight: var(--font-weight-medium);
+  /* Ensure proper contrast in both themes */
+  background-color: var(--color-secondary);
+  color: var(--color-text);
+  border-color: var(--color-border);
 }
 
 .tag-pill:hover {
-  background-color: var(--color-pastel-purple);
+  background-color: var(--color-secondary-hover);
   transform: translateY(-1px);
 }
 
 .tag-pill.active {
-  background-color: var(--color-pastel-green);
-  box-shadow: var(--shadow-sm);
+  background-color: var(--color-primary);
+  color: var(--color-btn-primary-text);
   border-color: var(--color-primary);
-  color: var(--color-slate-900);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Tag overflow indicator */
+.tag-overflow-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--space-8);
+  background-color: var(--color-secondary);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  cursor: default;
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.tag-overflow-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
 }
 
 /* Sidebar Footer */
@@ -3107,6 +3147,221 @@ select.form-control {
     min-height: 44px !important; /* Touch-friendly button height */
   }
   
+  /* Active Filters Display - Base Styles */
+  .active-filters-display {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-base);
+    padding: var(--space-16);
+    margin-bottom: var(--space-16);
+    box-shadow: var(--mobile-shadow);
+    transition: all var(--duration-fast) var(--ease-standard);
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+
+  
+  .active-filters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-12);
+    flex-wrap: wrap;
+    gap: var(--space-8);
+  }
+  
+  .active-filters-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+  }
+  
+  .active-filters-icon {
+    font-size: var(--font-size-lg);
+  }
+  
+  .active-filters-title {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text);
+    font-size: var(--font-size-base);
+  }
+  
+  .active-filters-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-8);
+  }
+  
+  .active-filter-tag {
+    background: var(--color-primary);
+    color: var(--color-btn-primary-text);
+    padding: var(--space-4) var(--space-8);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    transition: all var(--duration-fast) var(--ease-standard);
+    cursor: default;
+    white-space: nowrap;
+  }
+  
+  .active-filter-tag .remove-filter {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    padding: 0;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+  
+  .active-filter-tag .remove-filter:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  /* Desktop optimization for active filters - Fixed */
+  @media (min-width: 768px) {
+    .active-filters-display {
+      max-width: 800px !important;
+      margin: 0 auto var(--space-16) auto !important;
+      padding: var(--space-20) !important;
+      border-radius: var(--radius-lg) !important;
+      box-shadow: var(--shadow-md) !important;
+      border: 2px solid var(--color-border) !important;
+      background: var(--color-surface) !important;
+    }
+    
+    .active-filters-display .active-filters-header {
+      margin-bottom: var(--space-16) !important;
+      padding-bottom: var(--space-12) !important;
+      border-bottom: 1px solid var(--color-border) !important;
+    }
+    
+    .active-filters-display .active-filters-title {
+      font-size: var(--font-size-lg) !important;
+      font-weight: var(--font-weight-semibold) !important;
+      color: var(--color-primary) !important;
+    }
+    
+    .active-filters-display .active-filter-tag {
+      padding: var(--space-6) var(--space-12) !important;
+      font-size: var(--font-size-base) !important;
+      box-shadow: var(--shadow-sm) !important;
+    }
+  }
+  
+  /* Force desktop styles with higher specificity */
+  @media (min-width: 768px) {
+    body .active-filters-display {
+      max-width: 800px !important;
+      margin: 0 auto var(--space-16) auto !important;
+      padding: var(--space-20) !important;
+      border-radius: var(--radius-lg) !important;
+      box-shadow: var(--shadow-md) !important;
+      border: 2px solid var(--color-border) !important;
+      background: var(--color-surface) !important;
+    }
+  }
+  
+  /* Alternative breakpoint approach */
+  @media screen and (min-width: 769px) {
+    .active-filters-display {
+      max-width: 800px !important;
+      margin: 0 auto var(--space-16) auto !important;
+      padding: var(--space-20) !important;
+      border-radius: var(--radius-lg) !important;
+      box-shadow: var(--shadow-md) !important;
+      border: 2px solid var(--color-border) !important;
+      background: var(--color-surface) !important;
+    }
+  }
+  
+  /* Force styles with ID selector for maximum specificity */
+  #activeFiltersDisplay {
+    /* Base styles that should always apply */
+    box-sizing: border-box;
+  }
+  
+  /* Desktop styles with maximum specificity */
+  @media (min-width: 768px) {
+    #activeFiltersDisplay {
+      max-width: 800px !important;
+      margin: 0 auto var(--space-16) auto !important;
+      padding: var(--space-20) !important;
+      border-radius: var(--radius-lg) !important;
+      box-shadow: var(--shadow-md) !important;
+      border: 2px solid var(--color-border) !important;
+      background: var(--color-surface) !important;
+    }
+    
+    #activeFiltersDisplay .active-filters-header {
+      margin-bottom: var(--space-16) !important;
+      padding-bottom: var(--space-12) !important;
+      border-bottom: 1px solid var(--color-border) !important;
+    }
+    
+    #activeFiltersDisplay .active-filters-title {
+      font-size: var(--font-size-lg) !important;
+      font-weight: var(--font-weight-semibold) !important;
+      color: var(--color-primary) !important;
+    }
+    
+    #activeFiltersDisplay .active-filter-tag {
+      padding: var(--space-6) var(--space-12) !important;
+      font-size: var(--font-size-base) !important;
+      box-shadow: var(--shadow-sm) !important;
+    }
+  }
+  
+  /* Alternative approach - use different breakpoint */
+  @media (min-width: 769px) {
+    #activeFiltersDisplay {
+      max-width: 800px !important;
+      margin: 0 auto var(--space-16) auto !important;
+      padding: var(--space-20) !important;
+      border-radius: var(--radius-lg) !important;
+      box-shadow: var(--shadow-md) !important;
+      border: 2px solid var(--color-border) !important;
+      background: var(--color-surface) !important;
+    }
+  }
+  
+  /* Force styles without media query for testing */
+  #activeFiltersDisplay.desktop-styled {
+    max-width: 800px !important;
+    margin: 0 auto var(--space-16) auto !important;
+    padding: var(--space-20) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-md) !important;
+    border: 2px solid var(--color-border) !important;
+    background: var(--color-surface) !important;
+  }
+  
+
+  
+  /* Enhanced tag pill styling for sidebar */
+  .tag-pill.active {
+    background: var(--color-primary) !important;
+    color: var(--color-btn-primary-text) !important;
+    border-color: var(--color-primary) !important;
+    font-weight: var(--font-weight-medium) !important;
+    box-shadow: 0 2px 4px rgba(33, 128, 141, 0.3) !important;
+  }
+  
+  .tag-pill.active:hover {
+    background: var(--color-primary-dark) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(33, 128, 141, 0.4) !important;
+  }
+  
 
   
   /* Mobile main content - maximize width usage */
@@ -4317,3 +4572,277 @@ select.form-control {
     flex: 1;
   }
 }
+
+/* Base styles for active filters display (consistent across all devices) */
+#activeFiltersDisplay {
+  padding: 12px 16px !important;
+  margin: 12px 16px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(94, 82, 64, 0.15) !important;
+  background: rgba(255, 255, 253, 0.03) !important;
+  width: calc(100% - 32px) !important;
+  box-sizing: border-box !important;
+  min-height: auto !important;
+}
+
+/* Consistent filter tag styling for all devices */
+#activeFiltersDisplay .active-filter-tag {
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+  margin: 4px 6px 4px 0 !important;
+  background: rgba(33, 128, 141, 0.8) !important;
+  color: white !important;
+  border-radius: 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+#activeFiltersDisplay .active-filter-tag .remove-filter {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: none !important;
+  color: white !important;
+  border-radius: 50% !important;
+  width: 18px !important;
+  height: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  font-size: 12px !important;
+  transition: background-color 0.2s ease !important;
+}
+
+#activeFiltersDisplay .active-filter-tag .remove-filter:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Mobile-specific adjustments for better spacing */
+@media (max-width: 767px) {
+  #activeFiltersDisplay {
+    margin: 12px 16px !important;
+    padding: 12px 16px !important;
+    width: calc(100% - 32px) !important;
+  }
+}
+
+
+
+/* Force desktop styles for active filters display */
+@media (min-width: 768px) {
+  #activeFiltersDisplay {
+    /* Desktop layout - consistent with mobile styling */
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 0 16px 0 !important;
+    padding: 16px 20px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+    border: 1px solid rgba(94, 82, 64, 0.15) !important;
+    background: rgba(255, 255, 253, 0.03) !important;
+    min-height: auto !important;
+  }
+  
+  /* Force override with maximum specificity */
+  body #activeFiltersDisplay {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 0 16px 0 !important;
+    padding: 16px 20px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+    border: 1px solid rgba(94, 82, 64, 0.15) !important;
+    background: rgba(255, 255, 253, 0.03) !important;
+    min-height: auto !important;
+  }
+  
+  /* Ultimate override with ID and class combination */
+  #activeFiltersDisplay.active-filters-display.desktop-styled {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 0 16px 0 !important;
+    padding: 16px 20px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+    border: 1px solid rgba(94, 82, 64, 0.15) !important;
+    background: rgba(255, 255, 253, 0.03) !important;
+    min-height: auto !important;
+  }
+  
+  /* Nuclear option - force styles with inline-level specificity */
+  html body #activeFiltersDisplay.active-filters-display.desktop-styled {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 0 16px 0 !important;
+    padding: 16px 20px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+    border: 1px solid rgba(94, 82, 64, 0.15) !important;
+    background: rgba(255, 255, 253, 0.03) !important;
+    min-height: auto !important;
+  }
+  
+  #activeFiltersDisplay .active-filters-header {
+    margin-bottom: 12px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 1px solid rgba(94, 82, 64, 0.15) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  
+  #activeFiltersDisplay .active-filters-title {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: rgba(33, 128, 141, 0.9) !important;
+  }
+  
+  #activeFiltersDisplay .active-filter-tag {
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+    margin: 4px 6px 4px 0 !important;
+    background: rgba(33, 128, 141, 0.8) !important;
+    color: white !important;
+    border-radius: 16px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+  
+  #activeFiltersDisplay .active-filter-tag .remove-filter {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: none !important;
+    color: white !important;
+    border-radius: 50% !important;
+    width: 18px !important;
+    height: 18px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    font-size: 12px !important;
+    transition: background-color 0.2s ease !important;
+  }
+  
+  #activeFiltersDisplay .active-filter-tag .remove-filter:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+  }
+}
+
+/* Light mode adjustments for tags modal */
+@media (prefers-color-scheme: light) {
+  .tags-list {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+  }
+  
+  .tag-list-item {
+    background: var(--color-background);
+    border-color: var(--color-border);
+  }
+  
+  .tag-list-item:hover {
+    background: var(--color-secondary);
+    border-color: var(--color-primary);
+  }
+  
+  .tag-list-count {
+    background: var(--color-secondary);
+    color: var(--color-text);
+  }
+}
+
+/* Dark mode adjustments for tags modal */
+@media (prefers-color-scheme: dark) {
+  .tags-list {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+  }
+  
+  .tag-list-item {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+  }
+  
+  .tag-list-item:hover {
+    background: var(--color-background);
+    border-color: var(--color-primary);
+  }
+  
+  .tag-list-count {
+    background: var(--color-secondary);
+    color: var(--color-text);
+  }
+}
+
+/* Enhanced tags modal styling for better theme compatibility */
+.tags-modal-content {
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+.tags-modal-content .modal-header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tags-modal-content .modal-body {
+  background: var(--color-background);
+}
+
+.tags-list {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-12);
+}
+
+.tag-list-item {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-8) var(--space-12);
+  margin-bottom: var(--space-8);
+  transition: all var(--duration-fast);
+}
+
+.tag-list-item:hover {
+  background: var(--color-secondary);
+  border-color: var(--color-primary);
+}
+
+.tag-list-item.selected {
+  background: var(--color-primary);
+  color: var(--color-btn-primary-text);
+  border-color: var(--color-primary);
+}
+
+.tag-list-count {
+  background: var(--color-secondary);
+  color: var(--color-text);
+  padding: var(--space-2) var(--space-6);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  min-width: 30px;
+  text-align: center;
+}
+
+/* Ensure tag pills in sidebar are visible in both themes */
+.tag-pill {
+  background-color: var(--color-secondary) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
+}
+
+.tag-pill:hover {
+  background-color: var(--color-secondary-hover) !important;
+}
+
+.tag-pill.active {
+  background-color: var(--color-primary) !important;
+  color: var(--color-btn-primary-text) !important;
+  border-color: var(--color-primary) !important;
+}
+

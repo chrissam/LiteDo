@@ -112,6 +112,10 @@
                         ⚙️
                     </button>
                 </div>
+                <!-- Tag Search Input -->
+                <div class="tag-search-container">
+                    <input type="text" id="tagSearchInput" class="tag-search-input" placeholder="Search tags..." />
+                </div>
                 <div class="tags-container" id="tagsContainer">
                     <!-- Tags will be dynamically populated -->
                 </div>
@@ -251,6 +255,20 @@
                         <span class="checkbox-custom"></span>
                         Select all
                     </label>
+                </div>
+            </div>
+
+            <!-- Active Filters Display -->
+            <div class="active-filters-display" id="activeFiltersDisplay" style="display: none;">
+                <div class="active-filters-header">
+                    <div class="active-filters-title-wrapper">
+                        <span class="active-filters-icon">🔍</span>
+                        <span class="active-filters-title">Active Filters</span>
+                    </div>
+                    <button class="btn btn--outline btn--sm" id="clearAllFiltersBtn" title="Clear all filters">Clear All</button>
+                </div>
+                <div class="active-filters-list" id="activeFiltersList">
+                    <!-- Active filters will be displayed here -->
                 </div>
             </div>
 

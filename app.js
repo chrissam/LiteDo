@@ -2,6 +2,7 @@
 class TodoApp {
     constructor() {
         this.tasks = [];
+        this.availableTags = []; // Store available tags separately
         this.currentFilter = 'all';
         this.currentSearch = '';
         this.currentSort = 'createdDate';
@@ -63,12 +64,26 @@ class TodoApp {
             }
             // Update file support UI when switching between mobile/desktop
             this.setupFileSupportUI();
+            
+            // Update desktop styling for active filters
+            const activeFiltersDisplay = document.getElementById('activeFiltersDisplay');
+            if (activeFiltersDisplay) {
+                if (window.innerWidth >= 768) {
+                    activeFiltersDisplay.classList.add('desktop-styled');
+                    console.log('Resize: Added desktop-styled class, screen width:', window.innerWidth);
+                } else {
+                    activeFiltersDisplay.classList.remove('desktop-styled');
+                    console.log('Resize: Removed desktop-styled class, screen width:', window.innerWidth);
+                }
+            }
         });
     }
 
     // Load data from localStorage or use sample data
     loadData() {
         const storedTasks = localStorage.getItem('fancyTasks');
+        const storedTags = localStorage.getItem('fancyTags');
+        
         if (storedTasks) {
             try {
                 this.tasks = JSON.parse(storedTasks);
@@ -78,6 +93,15 @@ class TodoApp {
             }
         } else {
             this.loadSampleData();
+        }
+        
+        if (storedTags) {
+            try {
+                this.availableTags = JSON.parse(storedTags);
+            } catch (e) {
+                console.error('Error parsing stored tags:', e);
+                this.availableTags = [];
+            }
         }
     }
 
@@ -125,8 +149,9 @@ class TodoApp {
     saveData() {
         try {
             localStorage.setItem('fancyTasks', JSON.stringify(this.tasks));
+            localStorage.setItem('fancyTags', JSON.stringify(this.availableTags));
         } catch (e) {
-            console.error('Error saving tasks:', e);
+            console.error('Error saving data:', e);
         }
         if (this.autoSave && this.fileHandle && this.isFileSystemSupported) {
             this.persistToFileDebounced();
@@ -269,6 +294,14 @@ class TodoApp {
                 if (e.target.classList.contains('modal')) {
                     this.hideModal('tagsModal');
                 }
+            });
+        }
+
+        // Tag search input
+        const tagSearchInput = document.getElementById('tagSearchInput');
+        if (tagSearchInput) {
+            tagSearchInput.addEventListener('input', () => {
+                this.renderTags();
             });
         }
 
@@ -1334,10 +1367,10 @@ class TodoApp {
             }
         }
 
-        // Tags filter
+        // Tags filter - use OR logic (show tasks that match ANY of the selected tags)
         if (this.advancedFilters.tags.length > 0) {
             filtered = filtered.filter(task => 
-                this.advancedFilters.tags.every(tag => task.tags.includes(tag))
+                this.advancedFilters.tags.some(tag => task.tags.includes(tag))
             );
         }
 
@@ -1447,9 +1480,15 @@ class TodoApp {
     // Get all unique tags
     getAllTags() {
         const tags = new Set();
+        
+        // Add tags from available tags
+        this.availableTags.forEach(tag => tags.add(tag));
+        
+        // Add tags from existing tasks
         this.tasks.forEach(task => {
             task.tags.forEach(tag => tags.add(tag));
         });
+        
         return Array.from(tags).sort();
     }
 
@@ -1765,22 +1804,45 @@ class TodoApp {
         if (tags.length === 0) {
             tagsContainer.innerHTML = '<p style="color: var(--color-text-secondary); font-size: var(--font-size-xs);">No tags yet</p>';
         } else {
-            const visible = tags.slice(0, 20);
+            const visible = tags.slice(0, 8); // Show only 8 tags by default
             const overflow = tags.length - visible.length;
             tagsContainer.innerHTML = visible.map(tag => `
-                <button class="tag-pill ${this.activeTag === tag ? 'active' : ''}" onclick="window.app.toggleTag('${tag}')">
+                <button class="tag-pill ${this.isTagSelected(tag) ? 'active' : ''}" onclick="window.app.toggleTag('${tag}')">
                     ${this.escapeHtml(tag)}
+                    ${this.isTagSelected(tag) ? ' ✓' : ''}
                 </button>
             `).join('') + (overflow > 0 ? `
-                <button class="tag-pill" title="${overflow} more tags hidden">+${overflow}</button>
+                <div class="tag-overflow-indicator" title="${overflow} more tags available">
+                    <span class="tag-overflow-text">+${overflow} more</span>
+                </div>
             ` : '');
         }
     }
 
-    // Toggle tag filter
+    // Check if a tag is currently selected in advanced filters
+    isTagSelected(tag) {
+        return this.advancedFilters.tags && this.advancedFilters.tags.includes(tag);
+    }
+
+    // Toggle tag filter - now supports multiple tags
     toggleTag(tag) {
-        this.activeTag = this.activeTag === tag ? null : tag;
+        if (!this.advancedFilters.tags) {
+            this.advancedFilters.tags = [];
+        }
+        
+        if (this.isTagSelected(tag)) {
+            // Remove tag from filters
+            this.advancedFilters.tags = this.advancedFilters.tags.filter(t => t !== tag);
+        } else {
+            // Add tag to filters
+            this.advancedFilters.tags.push(tag);
+        }
+        
+        // Apply filters immediately
         this.render();
+        this.updateCounts();
+        this.showFilterStatus();
+        this.updateCurrentFiltersDisplay();
     }
 
     // Update counts
@@ -2305,12 +2367,17 @@ class TodoApp {
             return;
         }
 
-        // Add tag to all tasks (optional - you could make this configurable)
-        // For now, just create the tag without assigning it to tasks
+        // Add tag to available tags
+        this.availableTags.push(tagName);
+        this.saveData();
         
+        // Update the UI
         this.hideAddTagForm();
         this.renderTagsModal();
         this.renderTags(); // Update sidebar tags
+        
+        // Show success message
+        alert(`Tag "${tagName}" has been created successfully!`);
     }
 
     // Edit tag
@@ -2932,31 +2999,31 @@ class TodoApp {
         if (filterFromDate) {
             filterFromDate.addEventListener('change', (e) => {
                 this.advancedFilters.fromDate = e.target.value || null;
-                this.debouncedApplyFilters();
+                // Don't auto-apply - wait for Apply button
             });
         }
         if (filterToDate) {
             filterToDate.addEventListener('change', (e) => {
                 this.advancedFilters.toDate = e.target.value || null;
-                this.debouncedApplyFilters();
+                // Don't auto-apply - wait for Apply button
             });
         }
 
-        // Priority filter
+                // Priority filter
         const filterPriority = document.getElementById('filterPriority');
         if (filterPriority) {
             filterPriority.addEventListener('change', (e) => {
                 this.advancedFilters.priority = e.target.value;
-                this.debouncedApplyFilters();
+                // Don't auto-apply - wait for Apply button
             });
         }
-
+        
         // Status filter
         const filterStatus = document.getElementById('filterStatus');
         if (filterStatus) {
             filterStatus.addEventListener('change', (e) => {
                 this.advancedFilters.status = e.target.value;
-                this.debouncedApplyFilters();
+                // Don't auto-apply - wait for Apply button
             });
         }
 
@@ -2967,26 +3034,26 @@ class TodoApp {
                 const tags = e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag);
                 this.advancedFilters.tags = tags;
                 this.showTagSuggestions(e.target.value);
-                this.debouncedApplyFilters();
+                // Don't auto-apply filters while typing - wait for Apply button
             });
         }
 
-        // Created date filter
+                // Created date filter
         const filterCreatedDate = document.getElementById('filterCreatedDate');
         if (filterCreatedDate) {
             filterCreatedDate.addEventListener('change', (e) => {
                 this.advancedFilters.createdDate = e.target.value;
                 this.handleCreatedDateFilterChange(e.target.value);
-                this.debouncedApplyFilters();
+                // Don't auto-apply - wait for Apply button
             });
         }
-
+        
         // Due date filter
         const filterDueDate = document.getElementById('filterDueDate');
         if (filterDueDate) {
             filterDueDate.addEventListener('change', (e) => {
                 this.advancedFilters.dueDate = e.target.value;
-                this.debouncedApplyFilters();
+                // Don't auto-apply - wait for Apply button
             });
         }
 
@@ -3001,6 +3068,14 @@ class TodoApp {
         const clearFiltersBtn = document.getElementById('clearFiltersBtn');
         if (clearFiltersBtn) {
             clearFiltersBtn.addEventListener('click', () => {
+                this.clearAllFilters();
+            });
+        }
+        
+        // Clear all filters button in main interface
+        const clearAllFiltersBtn = document.getElementById('clearAllFiltersBtn');
+        if (clearAllFiltersBtn) {
+            clearAllFiltersBtn.addEventListener('click', () => {
                 this.clearAllFilters();
             });
         }
@@ -3115,18 +3190,27 @@ class TodoApp {
         this.showFilterStatus();
         this.showFilterSummary();
         this.updateCurrentFiltersDisplay();
+        
+        // Close the modal after applying filters
+        this.hideModal('filtersModal');
     }
     
     // Update current filters display
     updateCurrentFiltersDisplay() {
         const currentFiltersList = document.getElementById('currentFiltersList');
+        const activeFiltersDisplay = document.getElementById('activeFiltersDisplay');
+        const activeFiltersList = document.getElementById('activeFiltersList');
+        
         if (!currentFiltersList) return;
         
         const activeFilters = [];
         
-        // Check date range filters
-        if (this.advancedFilters.fromDate || this.advancedFilters.toDate) {
-            const dateRange = `${this.advancedFilters.fromDate || 'Any'} to ${this.advancedFilters.toDate || 'Any'}`;
+        // Check date range filters - only show if actual dates are selected
+        if ((this.advancedFilters.fromDate && this.advancedFilters.fromDate.trim() !== '') || 
+            (this.advancedFilters.toDate && this.advancedFilters.toDate.trim() !== '')) {
+            const fromDate = this.advancedFilters.fromDate || 'Any';
+            const toDate = this.advancedFilters.toDate || 'Any';
+            const dateRange = `${fromDate} to ${toDate}`;
             activeFilters.push({
                 type: 'Date Range',
                 value: dateRange,
@@ -3181,6 +3265,7 @@ class TodoApp {
             });
         }
         
+        // Update modal display
         if (activeFilters.length === 0) {
             currentFiltersList.innerHTML = '<p class="no-filters-message">No filters currently applied</p>';
         } else {
@@ -3192,8 +3277,32 @@ class TodoApp {
             `).join('');
         }
         
+        // Update main interface display
+        if (activeFiltersDisplay && activeFiltersList) {
+            if (activeFilters.length === 0) {
+                activeFiltersDisplay.style.display = 'none';
+            } else {
+                activeFiltersDisplay.style.display = 'block';
+                activeFiltersList.innerHTML = activeFilters.map(filter => `
+                    <div class="active-filter-tag">
+                        <span>${filter.type}: ${filter.value}</span>
+                        <button class="remove-filter" onclick="window.app.removeFilter('${filter.id}')" title="Remove filter">×</button>
+                    </div>
+                `).join('');
+            }
+        }
+        
         // Also update the filter summary
         this.showFilterSummary();
+        
+        // Add desktop styling class if screen is wide enough
+        if (window.innerWidth >= 768) {
+            activeFiltersDisplay.classList.add('desktop-styled');
+            console.log('Added desktop-styled class, screen width:', window.innerWidth);
+        } else {
+            activeFiltersDisplay.classList.remove('desktop-styled');
+            console.log('Removed desktop-styled class, screen width:', window.innerWidth);
+        }
     }
     
     // Remove individual filter
@@ -3310,13 +3419,13 @@ class TodoApp {
     // Get count of active filters
     getActiveFiltersCount() {
         let count = 0;
-        if (this.advancedFilters.fromDate) count++;
-        if (this.advancedFilters.toDate) count++;
-        if (this.advancedFilters.priority) count++;
-        if (this.advancedFilters.status) count++;
+        if (this.advancedFilters.fromDate && this.advancedFilters.fromDate.trim() !== '') count++;
+        if (this.advancedFilters.toDate && this.advancedFilters.toDate.trim() !== '') count++;
+        if (this.advancedFilters.priority && this.advancedFilters.priority.trim() !== '') count++;
+        if (this.advancedFilters.status && this.advancedFilters.status.trim() !== '') count++;
         if (this.advancedFilters.tags.length > 0) count++;
-        if (this.advancedFilters.createdDate) count++;
-        if (this.advancedFilters.dueDate) count++;
+        if (this.advancedFilters.createdDate && this.advancedFilters.createdDate.trim() !== '') count++;
+        if (this.advancedFilters.dueDate && this.advancedFilters.dueDate.trim() !== '') count++;
         return count;
     }
 
@@ -3421,34 +3530,29 @@ class TodoApp {
 
         if (filterFromDate) filterFromDate.value = this.advancedFilters.fromDate || '';
         if (filterToDate) filterToDate.value = this.advancedFilters.toDate || '';
-        if (filterPriority) filterPriority.value = this.advancedFilters.priority;
-        if (filterStatus) filterStatus.value = this.advancedFilters.status;
+        if (filterPriority) filterPriority.value = this.advancedFilters.priority || '';
+        if (filterStatus) filterStatus.value = this.advancedFilters.status || '';
         if (filterTags) filterTags.value = this.advancedFilters.tags.join(', ');
-        if (filterCreatedDate) filterCreatedDate.value = this.advancedFilters.createdDate;
-        if (filterDueDate) filterDueDate.value = this.advancedFilters.dueDate;
+        if (filterCreatedDate) filterCreatedDate.value = this.advancedFilters.createdDate || '';
+        if (filterDueDate) filterDueDate.value = this.advancedFilters.dueDate || '';
     }
 
     // Initialize filter form with sensible defaults
     initializeFilterForm() {
-        // Set default date range to current month
-        const today = new Date();
-        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        
+        // Don't set default dates automatically - let user choose
         const filterFromDate = document.getElementById('filterFromDate');
         const filterToDate = document.getElementById('filterToDate');
         
         if (filterFromDate) {
-            filterFromDate.value = this.formatDateForFilter(firstDayOfMonth);
-            this.advancedFilters.fromDate = this.formatDateForFilter(firstDayOfMonth);
+            filterFromDate.value = '';
+            this.advancedFilters.fromDate = '';
         }
         if (filterToDate) {
-            filterToDate.value = this.formatDateForFilter(lastDayOfMonth);
-            this.advancedFilters.toDate = this.formatDateForFilter(lastDayOfMonth);
+            filterToDate.value = '';
+            this.advancedFilters.toDate = '';
         }
         
-        // Update the current filters display after setting defaults
-        this.updateCurrentFiltersDisplay();
+        // Don't update display since no filters are active
     }
 
     // Render task description with word limit
@@ -3510,15 +3614,16 @@ class TodoApp {
     getFilterSummary() {
         const summary = [];
         
-        if (this.advancedFilters.fromDate && this.advancedFilters.toDate) {
-            summary.push(`Date: ${this.advancedFilters.fromDate} to ${this.advancedFilters.toDate}`);
+        if ((this.advancedFilters.fromDate && this.advancedFilters.fromDate.trim() !== '') || 
+            (this.advancedFilters.toDate && this.advancedFilters.toDate.trim() !== '')) {
+            summary.push(`Date: ${this.advancedFilters.fromDate || 'Any'} to ${this.advancedFilters.toDate || 'Any'}`);
         }
         
-        if (this.advancedFilters.priority) {
+        if (this.advancedFilters.priority && this.advancedFilters.priority.trim() !== '') {
             summary.push(`Priority: ${this.advancedFilters.priority}`);
         }
         
-        if (this.advancedFilters.status) {
+        if (this.advancedFilters.status && this.advancedFilters.status.trim() !== '') {
             summary.push(`Status: ${this.advancedFilters.status}`);
         }
         
