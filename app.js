@@ -1583,6 +1583,9 @@ class TodoApp {
             // Initialize mobile action buttons
             this.initMobileActionButtons();
             
+            // Optimize search input for mobile
+            this.optimizeSearchInputForMobile();
+            
             // Mark as initialized
             this.mobileMenuInitialized = true;
             console.log('Mobile menu initialized successfully');
@@ -1618,6 +1621,24 @@ class TodoApp {
             toggle: mobileMenuToggle ? mobileMenuToggle.classList.toString() : 'not found',
             initialized: this.mobileMenuInitialized
         });
+    }
+    
+    // Optimize search input for mobile devices
+    optimizeSearchInputForMobile() {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput && window.innerWidth <= 768) {
+            // Change placeholder to shorter text on mobile
+            searchInput.placeholder = 'Search tasks...';
+            
+            // Add mobile-specific class for additional styling if needed
+            searchInput.classList.add('mobile-search');
+            
+            // Also add mobile class to the wrapper for icon positioning
+            const searchWrapper = searchInput.closest('.search-input-wrapper');
+            if (searchWrapper) {
+                searchWrapper.classList.add('mobile-search-wrapper');
+            }
+        }
     }
     
     // Initialize mobile action buttons functionality
