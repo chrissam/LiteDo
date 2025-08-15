@@ -1524,6 +1524,11 @@ class TodoApp {
 
     // Initialize mobile menu functionality
     initMobileMenu() {
+        // Prevent duplicate initialization
+        if (this.mobileMenuInitialized) {
+            return;
+        }
+        
         const mobileMenuToggle = document.getElementById('mobileMenuToggle');
         const sidebar = document.getElementById('sidebar');
         const mobileOverlay = document.getElementById('mobileOverlay');
@@ -1532,14 +1537,29 @@ class TodoApp {
 
         if (mobileMenuToggle && sidebar && mobileOverlay) {
             // Toggle sidebar
-            mobileMenuToggle.addEventListener('click', () => {
+            mobileMenuToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('Mobile menu toggle clicked');
-                sidebar.classList.toggle('open');
-                mobileOverlay.classList.toggle('open');
+                
+                // Force the classes to be applied
+                if (sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                    mobileOverlay.classList.remove('open');
+                } else {
+                    sidebar.classList.add('open');
+                    mobileOverlay.classList.add('open');
+                }
+                
+                console.log('Sidebar classes after toggle:', sidebar.classList.toString());
+                console.log('Overlay classes after toggle:', mobileOverlay.classList.toString());
             });
 
             // Close sidebar when clicking overlay
-            mobileOverlay.addEventListener('click', () => {
+            mobileOverlay.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Overlay clicked - closing sidebar');
                 sidebar.classList.remove('open');
                 mobileOverlay.classList.remove('open');
             });
@@ -1562,7 +1582,42 @@ class TodoApp {
             
             // Initialize mobile action buttons
             this.initMobileActionButtons();
+            
+            // Mark as initialized
+            this.mobileMenuInitialized = true;
+            console.log('Mobile menu initialized successfully');
+        } else {
+            console.error('Mobile menu elements not found:', { mobileMenuToggle, sidebar, mobileOverlay });
         }
+    }
+    
+    // Force close mobile menu (for debugging)
+    forceCloseMobileMenu() {
+        const sidebar = document.getElementById('sidebar');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+        
+        if (sidebar) {
+            sidebar.classList.remove('open');
+        }
+        if (mobileOverlay) {
+            mobileOverlay.classList.remove('open');
+        }
+        
+        console.log('Mobile menu force closed');
+    }
+    
+    // Check mobile menu state (for debugging)
+    checkMobileMenuState() {
+        const sidebar = document.getElementById('sidebar');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        
+        console.log('Mobile menu state:', {
+            sidebar: sidebar ? sidebar.classList.toString() : 'not found',
+            overlay: mobileOverlay ? mobileOverlay.classList.toString() : 'not found',
+            toggle: mobileMenuToggle ? mobileMenuToggle.classList.toString() : 'not found',
+            initialized: this.mobileMenuInitialized
+        });
     }
     
     // Initialize mobile action buttons functionality
