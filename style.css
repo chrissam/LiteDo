@@ -1242,6 +1242,25 @@ select.form-control {
   color: var(--color-slate-900);
 }
 
+/* Completed task subtasks - inherit parent color scheme */
+.task-item.completed .subtasks-list {
+  border-left-color: var(--color-slate-900);
+}
+
+.task-item.completed .subtask .subtask-text {
+  color: var(--color-slate-900);
+}
+
+/* Completed task subtask checkboxes - inherit parent color scheme */
+.task-item.completed .subtasks-list .checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
+  background-color: var(--color-slate-900);
+  border-color: var(--color-slate-900);
+}
+
+.task-item.completed .subtasks-list .checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {
+  color: var(--color-pastel-green);
+}
+
 .task-item.completed .priority-badge {
   color: var(--color-slate-900);
 }
@@ -2985,6 +3004,24 @@ select.form-control {
   }
 }
 
+/* Desktop task layout - original way */
+.task-item {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--space-12);
+}
+
+.task-content {
+  flex: 1;
+  margin-right: var(--space-12);
+}
+
+.task-checkbox {
+  margin-right: var(--space-12);
+  flex-shrink: 0;
+}
+
 /* Mobile devices only - ensure desktop sections are hidden */
 @media (max-width: 768px) {
   /* Ensure desktop sections are hidden on mobile */
@@ -3032,23 +3069,25 @@ select.form-control {
   
 
   
-  /* Mobile main content - redesigned for better UX */
+  /* Mobile main content - maximize width usage */
   .main-content {
-    margin-left: 0;
-    padding: var(--space-12);
-    padding-top: 0;
+    margin-left: 0 !important;
+    padding: var(--space-8) !important;
+    padding-top: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
   }
   
-  /* Mobile header - compact and clean */
+  /* Mobile header - compact and maximize content space */
   .main-header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: var(--color-background);
-    padding: var(--space-8) var(--space-16);
-    margin: calc(-1 * var(--space-12)) calc(-1 * var(--space-12)) var(--space-16) calc(-1 * var(--space-12));
-    border-bottom: 1px solid var(--color-border);
-    backdrop-filter: blur(10px);
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    background: var(--color-background) !important;
+    padding: var(--space-8) var(--space-12) !important;
+    margin: calc(-1 * var(--space-8)) calc(-1 * var(--space-8)) var(--space-12) calc(-1 * var(--space-8)) !important;
+    border-bottom: 1px solid var(--color-border) !important;
+    backdrop-filter: blur(10px) !important;
   }
   
   .header-left {
@@ -3057,12 +3096,12 @@ select.form-control {
     margin-bottom: var(--space-8);
   }
   
-  /* Mobile page logo container - properly centered */
+  /* Mobile page logo container - compact and centered */
   .mobile-page-logo-container {
-    display: block;
-    text-align: center;
-    margin-bottom: var(--space-16);
-    padding-top: var(--space-8);
+    display: block !important;
+    text-align: center !important;
+    margin-bottom: var(--space-8) !important;
+    padding-top: var(--space-4) !important;
   }
   
   .mobile-logo {
@@ -3192,34 +3231,68 @@ select.form-control {
   }
   
   .task-item {
-    padding: var(--space-16);
-    margin-bottom: var(--space-12);
+    padding: var(--space-20);
+    margin-bottom: var(--space-16);
     border-radius: var(--mobile-border-radius);
     box-shadow: var(--mobile-shadow);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
+    width: 100%;
+    box-sizing: border-box;
   }
   
   .task-header {
     flex-direction: column;
-    gap: var(--space-8);
+    gap: var(--space-12);
     align-items: flex-start;
-    margin-bottom: var(--space-12);
+    margin-bottom: var(--space-16);
   }
   
   .task-title {
-    font-size: var(--font-size-base);
-    line-height: 1.3;
+    font-size: var(--font-size-lg);
+    line-height: 1.4;
     font-weight: var(--font-weight-medium);
     color: var(--color-text);
     margin: 0;
+    width: 100%;
+    word-wrap: break-word;
   }
   
   .task-description {
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-base);
     color: var(--color-text-secondary);
-    line-height: 1.4;
-    margin: var(--space-4) 0;
+    line-height: 1.5;
+    margin: var(--space-8) 0;
+    width: 100%;
+    word-wrap: break-word;
+  }
+  
+  .description-excerpt {
+    display: inline;
+  }
+  
+  .description-full {
+    display: none;
+  }
+  
+  .read-more-btn,
+  .read-less-btn {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    padding: var(--space-2) var(--space-4);
+    margin-left: var(--space-4);
+    text-decoration: underline;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+  
+  .read-more-btn:hover,
+  .read-less-btn:hover {
+    color: var(--color-primary-dark);
+    text-decoration: none;
   }
   
   .task-meta {
@@ -3227,52 +3300,181 @@ select.form-control {
     gap: var(--space-8);
     align-items: center;
     flex-wrap: wrap;
-    margin-bottom: var(--space-12);
+    margin-bottom: var(--space-16);
+    width: 100%;
   }
   
   .task-meta > * {
-    font-size: var(--font-size-xs);
-    padding: var(--space-2) var(--space-6);
+    font-size: var(--font-size-sm);
+    padding: var(--space-4) var(--space-8);
     background: var(--color-secondary);
     border-radius: var(--radius-full);
     color: var(--color-text);
+    white-space: nowrap;
   }
   
-  .task-actions {
-    justify-content: space-between;
-    gap: var(--space-8);
-    margin-top: var(--space-12);
-    padding-top: var(--space-12);
-    border-top: 1px solid var(--color-border);
+  .task-tags {
+    width: 100%;
+    margin-bottom: var(--space-16);
   }
+  
+  .task-tag {
+    font-size: var(--font-size-sm);
+    padding: var(--space-4) var(--space-8);
+    background: var(--color-primary);
+    color: var(--color-btn-primary-text);
+    border-radius: var(--radius-full);
+    margin-right: var(--space-8);
+    margin-bottom: var(--space-4);
+    display: inline-block;
+  }
+  
+
   
   .task-action-btn {
-    padding: var(--space-8);
-    font-size: var(--font-size-base);
-    min-width: 40px;
-    min-height: 40px;
-    border-radius: var(--radius-base);
+    padding: var(--space-6);
+    font-size: var(--font-size-sm);
+    min-width: 32px;
+    min-height: 32px;
+    border-radius: var(--radius-sm);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     color: var(--color-text);
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
-  .task-action-btn.complete {
-    background: var(--color-success);
+  /* Mobile checkbox improvements - override desktop */
+  .task-checkbox {
+    position: static !important;
+    margin-right: var(--space-12) !important;
+    margin-bottom: var(--space-8) !important;
+    display: flex !important;
+    align-items: center !important;
+    flex-shrink: 0 !important;
+  }
+  
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+  
+
+  
+  /* Simple, reliable checkbox design */
+  .checkbox-custom {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--color-border);
+    border-radius: 4px;
+    background: var(--color-surface);
+    display: inline-block;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  
+  .checkbox-custom:after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     color: var(--color-btn-primary-text);
-    border-color: var(--color-success);
+    font-size: 14px;
+    font-weight: bold;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    line-height: 1;
   }
   
-  .task-action-btn.edit {
+  .checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
     background: var(--color-primary);
-    color: var(--color-btn-primary-text);
     border-color: var(--color-primary);
   }
   
+  .checkbox-label input[type="checkbox"]:checked + .checkbox-custom:after {
+    opacity: 1;
+  }
+  
+  .checkbox-label input[type="checkbox"]:focus + .checkbox-custom {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  
+  /* Hide the actual checkbox input */
+  .checkbox-label input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  .task-action-btn.complete {
+    background: var(--color-pastel-green);
+    color: var(--color-success);
+    border-color: var(--color-pastel-green);
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
+  }
+  
+  .task-action-btn.edit {
+    background: var(--color-pastel-blue);
+    color: var(--color-primary);
+    border-color: var(--color-pastel-blue);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+  }
+  
   .task-action-btn.delete {
+    background: var(--color-pastel-pink);
+    color: var(--color-error);
+    border-color: var(--color-pastel-pink);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+  }
+  
+  /* Completed task action buttons - match desktop styling */
+  .task-item.completed .task-action-btn {
+    background: rgba(255, 255, 255, 0.75) !important;
+    border-color: var(--color-card-border) !important;
+    color: var(--color-slate-900) !important;
+  }
+  
+  .task-item.completed .task-action-btn:hover {
+    background: rgba(255, 255, 255, 0.9) !important;
+  }
+  
+  .task-item.completed .task-action-btn.complete,
+  .task-item.completed .task-action-btn.edit,
+  .task-item.completed .task-action-btn.delete {
+    color: var(--color-slate-900) !important;
+  }
+  
+  /* Hover effects for action buttons - optimized for small size */
+  .task-action-btn.complete:hover {
+    background: var(--color-success);
+    color: var(--color-btn-primary-text);
+    border-color: var(--color-success);
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+    transform: scale(1.05);
+  }
+  
+  .task-action-btn.edit:hover {
+    background: var(--color-primary);
+    color: var(--color-btn-primary-text);
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    transform: scale(1.05);
+  }
+  
+  .task-action-btn.delete:hover {
     background: var(--color-error);
     color: var(--color-btn-primary-text);
     border-color: var(--color-error);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    transform: scale(1.05);
   }
   
   /* Mobile modals */
@@ -3319,6 +3521,242 @@ select.form-control {
   }
   
 
+  
+  /* Mobile task layout - maximize width usage */
+  .task-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: var(--space-12) !important;
+    width: 100% !important;
+    padding: var(--space-16) !important;
+    background: var(--color-surface) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-base) !important;
+    margin-bottom: var(--space-12) !important;
+  }
+  
+  /* Completed task styling - match desktop green background */
+  .task-item.completed {
+    background: var(--color-pastel-green) !important;
+    border-color: var(--color-pastel-green) !important;
+  }
+  
+  .task-item.completed .task-content {
+    color: var(--color-slate-900) !important;
+  }
+  
+  .task-item.completed .task-title {
+    color: var(--color-slate-900) !important;
+    text-decoration: line-through !important;
+  }
+  
+  .task-item.completed .task-description {
+    color: var(--color-slate-900) !important;
+  }
+  
+  .task-item.completed .task-meta > * {
+    color: var(--color-slate-900) !important;
+  }
+  
+  .task-item.completed .task-tag {
+    color: var(--color-slate-900) !important;
+  }
+  
+  /* Completed task subtasks - inherit parent color scheme */
+  .task-item.completed .subtasks-list {
+    border-left-color: var(--color-slate-900) !important;
+  }
+  
+  .task-item.completed .subtask .subtask-text {
+    color: var(--color-slate-900) !important;
+  }
+  
+  /* Completed task subtask checkboxes - inherit parent color scheme */
+  .task-item.completed .subtasks-list .checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
+    background-color: var(--color-slate-900) !important;
+    border-color: var(--color-slate-900) !important;
+  }
+  
+  .task-item.completed .subtasks-list .checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {
+    color: var(--color-pastel-green) !important;
+  }
+  
+  .task-content {
+    flex: 1 !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  
+  /* Create mobile header section using CSS */
+  .task-item > .task-checkbox {
+    order: 1;
+    margin-bottom: var(--space-8) !important;
+  }
+  
+  .task-item > .task-content {
+    order: 2;
+    margin: 0 !important;
+  }
+  
+  .task-item > .task-actions {
+    order: 3;
+    margin: 0 !important;
+  }
+  
+  /* Mobile task actions - proper mobile layout */
+  .task-item .task-actions {
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-top: var(--space-8);
+    padding: var(--space-6);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-base);
+    width: 100%;
+    display: none;
+    pointer-events: none;
+    transition: all var(--duration-fast) var(--ease-standard);
+  }
+  
+  /* Show task actions on hover */
+  .task-item:hover .task-actions {
+    display: flex;
+    pointer-events: auto;
+  }
+  
+  /* Show task actions when selected */
+  .task-item.selected .task-actions {
+    display: flex;
+    pointer-events: auto;
+  }
+  
+  /* Mobile bulk actions styling - compact */
+  .mobile-bulk-actions {
+    position: relative !important;
+    margin: var(--space-8) !important;
+    display: flex !important;
+    justify-content: center !important;
+  }
+  
+  .mobile-bulk-toggle-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-btn-primary-text);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--duration-fast) var(--ease-standard);
+    box-shadow: var(--mobile-shadow);
+  }
+  
+  .mobile-bulk-toggle-btn:hover {
+    background: var(--color-primary-dark);
+    border-color: var(--color-primary-dark);
+    transform: scale(1.05);
+  }
+  
+  .mobile-bulk-content {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--mobile-border-radius);
+    box-shadow: var(--mobile-shadow);
+    transition: all var(--duration-normal) var(--ease-standard);
+    max-height: 200px;
+    opacity: 1;
+    z-index: 100;
+  }
+  
+  .mobile-bulk-content.collapsed {
+    max-height: 0;
+    padding: 0;
+    opacity: 0;
+    overflow: hidden;
+    border: none;
+  }
+  
+  .mobile-bulk-actions-panel {
+    padding: var(--space-16);
+  }
+  
+  .mobile-bulk-left {
+    display: flex;
+    gap: var(--space-8);
+    align-items: center;
+    margin-bottom: var(--space-12);
+  }
+  
+  .mobile-bulk-right {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-12);
+  }
+  
+  .mobile-bulk-count {
+    text-align: center;
+    padding: var(--space-8);
+    background: var(--color-secondary);
+    border-radius: var(--radius-base);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+  }
+  
+  .mobile-bulk-actions .btn {
+    padding: var(--space-8) var(--space-12);
+    font-size: var(--font-size-sm);
+    min-height: 36px;
+    flex: 1;
+  }
+  
+  .mobile-bulk-actions .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+  }
+  
+  .mobile-bulk-left {
+    display: flex;
+    gap: var(--space-8);
+    align-items: center;
+    margin-bottom: var(--space-12);
+  }
+  
+  .mobile-bulk-right {
+    display: flex;
+    align-items: center;
+  }
+  
+  .mobile-bulk-actions .btn {
+    padding: var(--space-8) var(--space-12);
+    font-size: var(--font-size-sm);
+    min-height: 36px;
+  }
+  
+  .mobile-bulk-actions .selected-count {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin-left: var(--space-4);
+  }
+  
+  .mobile-bulk-actions .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+  }
   
   /* Mobile form improvements */
   .form-group {

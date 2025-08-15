@@ -202,6 +202,31 @@
                 </div>
             </header>
 
+            <!-- Mobile Bulk Actions - Only visible on mobile -->
+            <div class="mobile-bulk-actions mobile-only">
+                <button class="mobile-bulk-toggle-btn" onclick="window.app.toggleMobileBulkActions()" title="Show bulk actions">
+                    +
+                </button>
+                <div class="mobile-bulk-content collapsed">
+                    <div class="mobile-bulk-actions-panel">
+                        <div class="mobile-bulk-left">
+                            <button class="btn btn--outline btn--sm" id="mobileMarkDoneBtn">Mark done</button>
+                            <button class="btn btn--outline btn--sm" id="mobileDeleteSelectedBtn">Delete</button>
+                        </div>
+                        <div class="mobile-bulk-right">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="mobileSelectAllCheckbox">
+                                <span class="checkbox-custom"></span>
+                                Select all
+                            </label>
+                        </div>
+                        <div class="mobile-bulk-count">
+                            <span id="mobileSelectedCount">0 selected</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Add Task Button -->
             <div class="add-task-section">
                 <button type="button" id="openAddTaskModalBtn" class="btn btn--primary btn--full-width">

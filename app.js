@@ -1031,6 +1031,12 @@ class TodoApp {
         }
         this.updateSelectedCount();
         this.render();
+        
+        // Update mobile select all checkbox
+        const mobileSelectAllCheckbox = document.getElementById('mobileSelectAllCheckbox');
+        if (mobileSelectAllCheckbox) {
+            mobileSelectAllCheckbox.checked = checked;
+        }
     }
 
     // Toggle task selection
@@ -1041,13 +1047,38 @@ class TodoApp {
             this.selectedTasks.delete(taskId);
         }
         this.updateSelectedCount();
+        
+        // Update task item classes to show/hide actions
+        const taskItem = document.querySelector(`[data-task-id="${taskId}"]`);
+        if (taskItem) {
+            if (checked) {
+                taskItem.classList.add('selected');
+            } else {
+                taskItem.classList.remove('selected');
+            }
+        }
     }
 
     // Update selected count
     updateSelectedCount() {
         const selectedCount = document.getElementById('selectedCount');
+        const mobileSelectedCount = document.getElementById('mobileSelectedCount');
+        
         if (selectedCount) {
             selectedCount.textContent = `Selected ${this.selectedTasks.size}`;
+        }
+        
+        if (mobileSelectedCount) {
+            const count = this.selectedTasks.size;
+            if (count > 0) {
+                mobileSelectedCount.textContent = `${count} selected`;
+                mobileSelectedCount.style.color = 'var(--color-primary)';
+                mobileSelectedCount.style.fontWeight = 'var(--font-weight-medium)';
+            } else {
+                mobileSelectedCount.textContent = '0 selected';
+                mobileSelectedCount.style.color = 'var(--color-text-secondary)';
+                mobileSelectedCount.style.fontWeight = 'normal';
+            }
         }
     }
 
@@ -1433,7 +1464,7 @@ class TodoApp {
             `;
         } else {
             taskList.innerHTML = filteredTasks.map(task => `
-                <div class="task-item ${task.completed ? 'completed' : ''}">
+                <div class="task-item ${task.completed ? 'completed' : ''} ${this.selectedTasks.has(task.id) ? 'selected' : ''} ${task.subtasks && task.subtasks.length > 0 ? 'has-subtasks' : ''}" data-task-id="${task.id}">
                     <label class="checkbox-label task-checkbox">
                         <input type="checkbox" ${this.selectedTasks.has(task.id) ? 'checked' : ''} 
                                onchange="window.app.toggleTaskSelection('${task.id}', this.checked)">
@@ -1442,7 +1473,7 @@ class TodoApp {
                     
                     <div class="task-content">
                         <div class="task-title">${this.escapeHtml(task.title)}</div>
-                        ${task.description ? `<div class="task-description">${this.escapeHtml(task.description)}</div>` : ''}
+                        ${task.description ? this.renderTaskDescription(task.description, task.id) : ''}
                         
                         <div class="task-meta">
                             <span class="priority-badge priority-${task.priority.toLowerCase()}">${task.priority}</span>
@@ -2830,6 +2861,54 @@ class TodoApp {
         
         // Initialize filter form with defaults
         this.initializeFilterForm();
+        
+        // Initialize mobile bulk action buttons
+        this.initMobileBulkActions();
+    }
+    
+    // Toggle mobile bulk actions visibility
+    toggleMobileBulkActions() {
+        const mobileBulkContent = document.querySelector('.mobile-bulk-content');
+        const toggleBtn = document.querySelector('.mobile-bulk-toggle-btn');
+        
+        if (mobileBulkContent && toggleBtn) {
+            if (mobileBulkContent.classList.contains('collapsed')) {
+                // Expand
+                mobileBulkContent.classList.remove('collapsed');
+                mobileBulkContent.classList.add('expanded');
+                toggleBtn.textContent = '×';
+            } else {
+                // Collapse
+                mobileBulkContent.classList.remove('expanded');
+                mobileBulkContent.classList.add('collapsed');
+                toggleBtn.textContent = '+';
+            }
+        }
+    }
+    
+    // Initialize mobile bulk action buttons
+    initMobileBulkActions() {
+        const mobileMarkDoneBtn = document.getElementById('mobileMarkDoneBtn');
+        const mobileDeleteSelectedBtn = document.getElementById('mobileDeleteSelectedBtn');
+        const mobileSelectAllCheckbox = document.getElementById('mobileSelectAllCheckbox');
+        
+        if (mobileMarkDoneBtn) {
+            mobileMarkDoneBtn.addEventListener('click', () => {
+                this.markSelectedDone();
+            });
+        }
+        
+        if (mobileDeleteSelectedBtn) {
+            mobileDeleteSelectedBtn.addEventListener('click', () => {
+                this.deleteSelected();
+            });
+        }
+        
+        if (mobileSelectAllCheckbox) {
+            mobileSelectAllCheckbox.addEventListener('change', (e) => {
+                this.toggleSelectAll(e.target.checked);
+            });
+        }
     }
 
     // Show tag suggestions
@@ -3230,6 +3309,61 @@ class TodoApp {
         this.updateCurrentFiltersDisplay();
     }
 
+    // Render task description with word limit
+    renderTaskDescription(description, taskId) {
+        const maxWords = 25; // Limit to 25 words
+        const words = description.trim().split(/\s+/);
+        
+        if (words.length <= maxWords) {
+            return `<div class="task-description">${this.escapeHtml(description)}</div>`;
+        }
+        
+        const truncatedText = words.slice(0, maxWords).join(' ');
+        const remainingWords = words.length - maxWords;
+        
+        return `
+            <div class="task-description">
+                <span class="description-excerpt">${this.escapeHtml(truncatedText)}...</span>
+                <button class="read-more-btn" onclick="window.app.toggleDescription('${taskId}')" title="Show full description">
+                    Read more (${remainingWords} more words)
+                </button>
+                <span class="description-full" style="display: none;">${this.escapeHtml(description)}</span>
+                <button class="read-less-btn" onclick="window.app.toggleDescription('${taskId}')" title="Show excerpt" style="display: none;">
+                    Show less
+                </button>
+            </div>
+        `;
+    }
+    
+    // Toggle between description excerpt and full text
+    toggleDescription(taskId) {
+        const taskItem = document.querySelector(`[data-task-id="${taskId}"]`) || 
+                        document.querySelector(`.task-item:has(.task-description button[onclick*="${taskId}"])`);
+        
+        if (!taskItem) return;
+        
+        const excerpt = taskItem.querySelector('.description-excerpt');
+        const full = taskItem.querySelector('.description-full');
+        const readMoreBtn = taskItem.querySelector('.read-more-btn');
+        const readLessBtn = taskItem.querySelector('.read-less-btn');
+        
+        if (excerpt && full && readMoreBtn && readLessBtn) {
+            if (excerpt.style.display !== 'none') {
+                // Show full description
+                excerpt.style.display = 'none';
+                full.style.display = 'inline';
+                readMoreBtn.style.display = 'none';
+                readLessBtn.style.display = 'inline';
+            } else {
+                // Show excerpt
+                excerpt.style.display = 'inline';
+                full.style.display = 'none';
+                readMoreBtn.style.display = 'inline';
+                readLessBtn.style.display = 'none';
+            }
+        }
+    }
+    
     // Get filter summary for display
     getFilterSummary() {
         const summary = [];
