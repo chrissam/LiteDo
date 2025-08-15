@@ -58,6 +58,7 @@ class TodoApp {
         window.addEventListener('resize', () => {
             if (window.innerWidth > 768) {
                 document.body.classList.remove('modal-open');
+                document.body.classList.remove('sidebar-open');
             }
             // Update file support UI when switching between mobile/desktop
             this.setupFileSupportUI();
@@ -1579,9 +1580,13 @@ class TodoApp {
                 if (sidebar.classList.contains('open')) {
                     sidebar.classList.remove('open');
                     mobileOverlay.classList.remove('open');
+                    // Re-enable body scrolling when sidebar is closed
+                    document.body.classList.remove('sidebar-open');
                 } else {
                     sidebar.classList.add('open');
                     mobileOverlay.classList.add('open');
+                    // Prevent body scrolling when sidebar is open
+                    document.body.classList.add('sidebar-open');
                 }
                 
                 console.log('Sidebar classes after toggle:', sidebar.classList.toString());
@@ -1595,6 +1600,8 @@ class TodoApp {
                 console.log('Overlay clicked - closing sidebar');
                 sidebar.classList.remove('open');
                 mobileOverlay.classList.remove('open');
+                // Re-enable body scrolling when sidebar is closed
+                document.body.classList.remove('sidebar-open');
             });
 
             // Close sidebar when clicking outside
